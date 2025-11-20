@@ -1,0 +1,232 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id               String   @id @default(uuid())
+  name             String
+  description      String?
+  repoUrl          String?
+  localPath        String?
+  summary          String
+  keyFunctionality String[]
+  keyMetrics       Json?
+  technologies     String[]
+  highlights       String[]
+  filesAnalyzed    Int
+  insights         Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  ownerId          String?
+
+  artifacts        ProjectArtifact[]
+  technologyLinks  ProjectTechnology[]
+  owner            User?            @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+}
+
+model Resume {
+  id               String    @id @default(uuid())
+  userId           String
+  sourceName       String?
+  extractedSummary String
+  skills           String[]
+  experience       Json?
+  education        Json?
+  contact          Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  tailoredAssets   TailoredAsset[]
+  technologyLinks  ResumeTechnology[]
+  user             User @relation("UserResume", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ConversationSession {
+  id              String                  @id @default(uuid())
+  userId          String
+  personaTopic    String
+  personaSummary  String
+  currentQuestion String?
+  insights        Json?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  responses       ConversationResponse[]
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ConversationResponse {
+  id          String               @id @default(uuid())
+  sessionId   String
+  question    String
+  userAnswer  String
+  evaluation  String
+  followUpPlan String?
+  createdAt   DateTime             @default(now())
+  session     ConversationSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Insight {
+  id        String   @id @default(uuid())
+  userId    String
+  topic     String
+  level     String
+  notes     String?
+  source    String
+  layer     InsightLayer @default(raw)
+  projectId String?
+  resumeId  String?
+  conversationSessionId String?
+  conversationResponseId String?
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  technologies InsightTechnology[]
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TailoredAsset {
+  id             String     @id @default(uuid())
+  userId         String
+  jobTitle       String
+  jobDescription String
+  assetType      AssetType
+  content        String
+  recommendations Json?
+  projectIds     String[]
+  createdAt      DateTime   @default(now())
+
+  resumeId String?
+  resume   Resume?   @relation(fields: [resumeId], references: [id])
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum AssetType {
+  resume
+  cover_letter
+  summary
+}
+
+model User {
+  id            String             @id @default(uuid())
+  email         String             @unique
+  displayName   String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  credential    UserCredential?
+  settings      UserSetting?
+  providerKeys  UserProviderKey[]
+  projects      Project[]
+  resumes       Resume[]           @relation("UserResume")
+  conversationSessions ConversationSession[]
+  tailoredAssets TailoredAsset[]
+  insights      Insight[]
+}
+
+model UserCredential {
+  userId       String  @id
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserSetting {
+  userId             String  @id
+  defaultLlmProvider String?
+  notificationPrefs  Json?
+  updatedAt          DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserProviderKey {
+  id           String   @id @default(uuid())
+  userId       String
+  provider     String
+  encryptedKey String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  metadata     Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+}
+
+model Technology {
+  id          String               @id @default(uuid())
+  name        String               @unique
+  category    String?
+  description String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  projectLinks      ProjectTechnology[]
+  resumeLinks       ResumeTechnology[]
+  insightLinks      InsightTechnology[]
+}
+
+model ProjectTechnology {
+  id            String     @id @default(uuid())
+  projectId     String
+  technologyId  String
+  usageContext  String?
+  source        String
+  createdAt     DateTime   @default(now())
+
+  project    Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+}
+
+model ResumeTechnology {
+  id            String     @id @default(uuid())
+  resumeId      String
+  technologyId  String
+  proficiency   String?
+  createdAt     DateTime   @default(now())
+
+  resume     Resume     @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+}
+
+model InsightTechnology {
+  id            String     @id @default(uuid())
+  insightId     String
+  technologyId  String
+  context       String?
+  createdAt     DateTime   @default(now())
+
+  insight    Insight    @relation(fields: [insightId], references: [id], onDelete: Cascade)
+  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+}
+
+model ProjectArtifact {
+  id             String               @id @default(uuid())
+  projectId      String
+  kind           ProjectArtifactKind
+  path           String?
+  contentPreview String?
+  metadata       Json?
+  createdAt      DateTime             @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+enum InsightLayer {
+  raw
+  derived
+  curated
+}
+
+enum ProjectArtifactKind {
+  source_file
+  heuristic
+  summary
+}
