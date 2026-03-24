@@ -1,5 +1,5 @@
 {
-  "name": "experience-api",
+  "name": "resume-tailor-api",
   "version": "1.0.0",
   "description": "Modular Express + TypeScript API for project intelligence, resume parsing, and conversational coaching.",
   "type": "module",
