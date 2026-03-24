@@ -8,7 +8,7 @@ Monorepo for the Resume Tailor platform:
 ## Repository Layout
 
 ```text
-resume-tailor-full/
+resume-tailor/
   resume-tailor-api/       # Backend API (Express + TypeScript + Prisma)
   resume-tailor-frontend/  # Frontend app (Next.js + React)
 ```
