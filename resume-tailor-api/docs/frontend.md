@@ -9,7 +9,8 @@ Use this document as the source of truth for building React clients against the 
 ## Shared Patterns
 
 - Validate request bodies client-side; backend uses `zod` and returns 400 with issue details.
-- Query params (`search`, `technology`, `userId`, etc.) are optional; omit keys when not used.
+- Protected routes derive `userId` from the JWT. Do not send `userId` in JSON bodies unless a route explicitly documents it as a query parameter.
+- Query params (`search`, `technology`, `ownerId`, `userId`, etc.) are optional; omit keys when not used.
 - All identifiers are UUID strings; persist them in client state/routing.
 
 ## Health
@@ -38,7 +39,10 @@ Use this document as the source of truth for building React clients against the 
   - Local indexing uses `{ "kind": "local", "path": "C:\\projects\\sample" }`.
   - Response includes `{ project, heuristics, summary }`.
 
-- **GET** `/projects?search=api&technology=TypeScript&mine=true` (set `mine=true` to restrict to current user)
+- **GET** `/projects?search=api&technology=TypeScript&mine=true`
+  - Public route. Without filters it can list indexed projects broadly.
+  - Set `mine=true` with a valid bearer token to restrict to the current user.
+  - Use `ownerId=<uuid>` only for explicit owner filtering.
 
 - **GET** `/projects/:projectId` *(auth required)*
 
@@ -47,12 +51,12 @@ Use this document as the source of truth for building React clients against the 
 - **POST** `/resumes/ingest` *(auth required)*
   ```json
   {
-    "userId": "user-123",
     "resumeText": "Plaintext or OCR output...",
     "sourceName": "May 2024 resume.pdf",
     "llmProvider": "google"
   }
   ```
+- The authenticated user's JWT supplies ownership; any client-sent `userId` is ignored.
 - Response: `{ record: Resume, insight: ResumeInsight }`
 
 - **GET** `/resumes` *(current user)*
@@ -76,7 +80,6 @@ Use this document as the source of truth for building React clients against the 
 - **POST** `/retrieval/tailor` *(auth required)* to generate resume/cover-letter-style content with structured recommendations.
   ```json
   {
-    "userId": "user-123",
     "jobTitle": "Senior React Engineer",
     "jobDescription": "Full JD text...",
     "resumeId": "uuid-from-resume",
@@ -85,13 +88,18 @@ Use this document as the source of truth for building React clients against the 
     "llmProvider": "ollama"
   }
   ```
+- The authenticated user's JWT supplies ownership for saved tailored assets.
 - **GET** `/retrieval/tailored` *(auth required)* to list previous assets.
 
 ## Knowledge Graph API
 
 Visualize the relationship between projects, resumes, technologies, artifacts, and persona focus areas.
 
-- **GET** `/knowledge-graph?userId=user-123` *(defaults to current user if omitted)*
+- **GET** `/knowledge-graph?userId=user-123`
+  - Public route. It does not require a JWT.
+  - `userId` filters resumes and conversation sessions.
+  - If `userId` is omitted, resumes and sessions are unfiltered.
+  - Projects and technologies are currently loaded globally even when `userId` is provided.
 - Response:
   ```json
   {
@@ -128,10 +136,10 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```json
   {
     "jobDescription": "Full job description text...",
-    "userId": "user-123",
     "llmProvider": "google"
   }
   ```
+- The authenticated user's JWT supplies the portfolio context for matching.
 - Response:
   ```json
   {
@@ -161,14 +169,36 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
 
-## LLM Catalog Routes
-
 ## Auth & Settings
 
 - **POST** `/auth/register` / **POST** `/auth/login` → `{ token, user }`
 - **GET** `/auth/me` / **PUT** `/auth/me` *(auth required)* for profile updates
 - **GET/PUT** `/settings` *(auth)* to manage default provider + notification prefs
 - **GET** `/settings/provider-keys`, **PUT** `/settings/provider-keys`, **DELETE** `/settings/provider-keys/:provider` *(auth)* to manage encrypted provider keys
+
+## Developer Profile
+
+- **POST** `/profiles/developer-report` *(auth required)*
+  ```json
+  {
+    "llmProvider": "openrouter"
+  }
+  ```
+- The backend gathers the authenticated user's resume highlights, persona insights, and project summaries before asking the LLM.
+- Response:
+  ```json
+  {
+    "data": {
+      "developerOverview": "Principled full-stack engineer with deep TypeScript + AWS experience...",
+      "coreStrengths": ["Owns complex migrations", "Measurable impact mindset"],
+      "growthOpportunities": ["Needs fresher Android exposure"],
+      "projectEvidence": ["Project Flow: GraphQL/Next.js platform ..."],
+      "technicalDepth": ["Distributed systems", "Observability"],
+      "riskCaveats": ["Limited Kubernetes ops history"],
+      "confidence": "medium"
+    }
+  }
+  ```
 
 ## LLM Catalog Routes
 
@@ -178,13 +208,13 @@ Upload/paste job descriptions to extract insights and compare against stored ass
 
 ## Implementation Tips
 
-1. **API client**: centralize fetch logic to unwrap `{ data }`, capture `{ error }`, and attach base headers.
+1. **API client**: centralize fetch logic to unwrap `{ data }`, capture `{ error }`, and attach base headers. The shipped Next.js client in `resume-tailor-frontend/src/lib/api-client.ts` unwraps `data` and throws `error.message`; callers that need zod `details` should extend that client.
 2. **LLM selections**: pair `/llm/models` with forms to let users override providers/models.
-3. **Graph tooling**: memoize `/knowledge-graph`, provide filters/search, and surface summary stats.
+3. **Graph tooling**: memoize `/knowledge-graph`, provide filters/search, and avoid assuming it is scoped to the current JWT.
 4. **Job intelligence UI**: combine insights + coverage data into comparison tables with remediation CTAs.
 5. **Optimistic UX**: indexing/tailoring/job intelligence can take seconds; show progress indicators.
 6. **Error handling**: parse `error.details` (zod issues) for inline validation messaging.
-7. **State caching**: persist IDs plus JWT token securely (httpOnly cookies or encrypted storage).
+7. **State caching**: persist IDs plus JWT token securely. The shipped Next.js app currently uses `localStorage` keys prefixed with `experience:auth-`.
 
 ## Recent Additions
 
@@ -192,3 +222,4 @@ Upload/paste job descriptions to extract insights and compare against stored ass
 - `GET /llm/models`, `GET /llm/models/:provider` – multi-provider model catalogs.
 - `GET /knowledge-graph` – consolidated project/resume/technology/artifact/persona graph.
 - `POST /intelligence/job` – job description insights plus project/resume coverage analysis.
+- `POST /profiles/developer-report` – user-scoped developer baseline report.
