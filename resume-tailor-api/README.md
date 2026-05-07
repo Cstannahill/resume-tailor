@@ -116,6 +116,7 @@ Routes that can be called without a valid JWT:
 - `POST /auth/login`
 - `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`
 - `GET /projects`; add `mine=true` with a valid bearer token to restrict to the current user, or use `ownerId=<uuid>` explicitly
+- `GET /projects/:id` for unowned projects; owned projects return `403` unless the bearer token belongs to the owner
 - `GET /knowledge-graph`; `userId=<uuid>` filters resumes and conversation sessions, but projects are currently loaded globally
 
 ## Security Notes

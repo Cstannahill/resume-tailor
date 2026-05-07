@@ -44,7 +44,9 @@ Use this document as the source of truth for building React clients against the 
   - Set `mine=true` with a valid bearer token to restrict to the current user.
   - Use `ownerId=<uuid>` only for explicit owner filtering.
 
-- **GET** `/projects/:projectId` *(auth required)*
+- **GET** `/projects/:projectId`
+  - Public route for unowned projects.
+  - Returns `403` when the project has an `ownerId` and the bearer token is missing or belongs to another user.
 
 ## Resumes Module
 
