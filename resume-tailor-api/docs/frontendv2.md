@@ -138,4 +138,4 @@ Body:
 - Missing resume or trying to edit someone else’s resume → `403/404`.
 - LLM failures still return 200 with `content` fallback (raw text) and `rationale` describing parse issues.
 
-Keep `frontend.MD` as the canonical reference for legacy routes; use this addendum only for the new resume-section editing surface. Update your client services accordingly.***
+Keep `frontend.md` as the canonical reference for legacy routes; use this addendum only for newer resume-section editing and developer-report surfaces. Update your client services accordingly.
