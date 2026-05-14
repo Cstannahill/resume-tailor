@@ -47,6 +47,7 @@ Body:
   }
   ```
 - Frontend: show the bullets + rationale, offer “Apply” to persist (see PATCH below).
+- Server prompts are enriched with resume summary/skills, indexed project highlights, and persona-coach insights, so clients only need to send UI-specific deltas.
 
 ### 2. Improve Existing Content
 
@@ -100,10 +101,40 @@ Body:
 4. **Apply** uses `PATCH` to persist; re-sync local state with response.
 5. Track `experienceIndex` if the user reorders experiences; pass the index to provide context to the LLM.
 
+## Developer Baseline Report
+
+Use this when you need a holistic picture of what the platform knows about a user across resumes, persona coach sessions, and indexed projects.
+
+```
+POST /profiles/developer-report
+Body:
+{
+  "llmProvider": "openrouter"
+}
+```
+
+- Requires authentication.
+- The backend gathers resume highlights, persona insights, and project summaries before asking the LLM.
+- Response shape:
+  ```json
+  {
+    "data": {
+      "developerOverview": "Principled full-stack engineer with deep TypeScript + AWS experience...",
+      "coreStrengths": ["Owns complex migrations", "Measurable impact mindset"],
+      "growthOpportunities": ["Needs fresher Android exposure"],
+      "projectEvidence": ["Project Flow: GraphQL/Next.js platform ..."],
+      "technicalDepth": ["Distributed systems", "Observability"],
+      "riskCaveats": ["Limited Kubernetes ops history"],
+      "confidence": "medium"
+    }
+  }
+  ```
+- Use the report to seed review UIs or to double-check the context that generation workflows will rely on.
+
 ## Error Handling
 
 - Invalid `:section` → backend returns `400`.
 - Missing resume or trying to edit someone else’s resume → `403/404`.
 - LLM failures still return 200 with `content` fallback (raw text) and `rationale` describing parse issues.
 
-Keep `frontend.MD` as the canonical reference for legacy routes; use this addendum only for the new resume-section editing surface. Update your client services accordingly.***
+Keep `frontend.md` as the canonical reference for legacy routes; use this addendum only for newer resume-section editing and developer-report surfaces. Update your client services accordingly.

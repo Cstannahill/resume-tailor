@@ -54,16 +54,18 @@ src/
 
 Copy `.env.example` → `.env` and fill:
 
-| Variable                                                       | Description                                |
-| -------------------------------------------------------------- | ------------------------------------------ | ------- | ------ | ----------- |
-| `DATABASE_URL`                                                 | PostgreSQL connection string               |
-| `DEFAULT_LLM_PROVIDER`                                         | `ollama                                    | bedrock | google | openrouter` |
-| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY`                            | Ollama Cloud config                        |
-| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock creds                          |
-| `GOOGLE_GENAI_API_KEY`                                         | Google GenAI key                           |
-| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`                    | OpenRouter config                          |
-| `AUTH_JWT_SECRET`                                              | Long random string for JWT signing         |
-| `APP_ENCRYPTION_KEY`                                           | Base64-encoded 32-byte key for AES-256-GCM |
+| Variable                                                       | Description                                                        |
+| -------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `PORT`, `NODE_ENV`                                             | HTTP port and runtime environment.                                 |
+| `DATABASE_URL`                                                 | PostgreSQL connection string.                                      |
+| `DEFAULT_LLM_PROVIDER`                                         | Default provider: `ollama`, `bedrock`, `google`, or `openrouter`.  |
+| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY`                            | Ollama Cloud config.                                               |
+| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock config.                                                |
+| `GOOGLE_GENAI_API_KEY`                                         | Google GenAI API key.                                              |
+| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`                    | OpenRouter config.                                                 |
+| `AUTH_JWT_SECRET`                                              | JWT signing secret; must be at least 32 characters.                |
+| `APP_ENCRYPTION_KEY`                                           | Base64-encoded 32-byte key for AES-256-GCM provider-key storage.   |
+| `CORS_ALLOWED_ORIGINS`                                         | Comma-separated browser origins allowed to call the API.           |
 
 ## Getting Started
 
