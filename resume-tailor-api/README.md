@@ -1,6 +1,6 @@
 # Resume Tailor API
 
-Modern Express + TypeScript (ESM) platform that indexes engineering projects, parses resumes, runs persona-based interviews, generates tailored job collateral, and surfaces knowledge graphs/intelligence insights. Everything is secured with JWT auth, user-specific settings, and encrypted provider keys on PostgreSQL via Prisma.
+Modern Express + TypeScript (ESM) platform that indexes engineering projects, parses resumes, runs persona-based interviews, generates tailored job collateral, and surfaces knowledge graphs/intelligence insights. User-owned workflows are protected by JWT auth, while selected read routes support public discovery or optional auth. Provider keys are encrypted before storage in PostgreSQL via Prisma.
 
 ## Feature Highlights
 
@@ -54,16 +54,17 @@ src/
 
 Copy `.env.example` → `.env` and fill:
 
-| Variable                                                       | Description                                |
-| -------------------------------------------------------------- | ------------------------------------------ | ------- | ------ | ----------- |
-| `DATABASE_URL`                                                 | PostgreSQL connection string               |
-| `DEFAULT_LLM_PROVIDER`                                         | `ollama                                    | bedrock | google | openrouter` |
-| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY`                            | Ollama Cloud config                        |
-| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock creds                          |
-| `GOOGLE_GENAI_API_KEY`                                         | Google GenAI key                           |
-| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`                    | OpenRouter config                          |
-| `AUTH_JWT_SECRET`                                              | Long random string for JWT signing         |
-| `APP_ENCRYPTION_KEY`                                           | Base64-encoded 32-byte key for AES-256-GCM |
+| Variable | Description |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string. |
+| `DEFAULT_LLM_PROVIDER` | One of `ollama`, `bedrock`, `google`, or `openrouter`. Defaults to `ollama`. |
+| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY` | Ollama Cloud config. `OLLAMA_BASE_URL` defaults to `https://ollama.com`. |
+| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock config. Required only when using Bedrock. |
+| `GOOGLE_GENAI_API_KEY` | Google GenAI key. Required only when using Google. |
+| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL` | OpenRouter config. Required only when using OpenRouter. |
+| `AUTH_JWT_SECRET` | Long random string for JWT signing; must be at least 32 characters. |
+| `APP_ENCRYPTION_KEY` | Base64-encoded 32-byte key for AES-256-GCM provider-key encryption. |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed browser origins. Defaults to `http://localhost:3000`. |
 
 ## Getting Started
 
@@ -78,26 +79,28 @@ Copy `.env.example` → `.env` and fill:
 | Script             | Description                                                 |
 | ------------------ | ----------------------------------------------------------- |
 | `npm run dev`      | Start Express via `tsx watch` (ESM hot reloading)           |
-| `npm run build`    | Type-check (tsc, no emit)                                   |
+| `npm run build`    | Compile TypeScript to `dist`                                |
 | `npm run start`    | Run compiled output (after `npm run build`)                 |
 | `npm run lint`     | ESLint (TS)                                                 |
 | `npm run prisma:*` | Prisma helpers (`migrate`, `studio`, `generate`, `db push`) |
 
 ## Core API Overview
 
-| Area             | Key Routes (all JSON, `Authorization: Bearer <token>` required unless noted)                               |
-| ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| Auth             | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/me`                                              |
-| Settings         | `GET/PUT /settings`, `GET/PUT/DELETE /settings/provider-keys`                                              |
-| Projects         | `POST /projects/index`, `GET /projects`, `GET /projects/:id`                                               |
-| Knowledge Graph  | `GET /knowledge-graph?userId=<id>`                                                                         |
-| Resumes          | `POST /resumes/ingest`, `GET /resumes`, `GET /resumes/:id`                                                 |
-| Conversations    | `POST /conversations/session`, `POST /conversations/session/:id/respond`, `GET /conversations/session/:id` |
-| Retrieval        | `POST /retrieval/tailor`, `GET /retrieval/tailored`                                                        |
-| Job Intelligence | `POST /intelligence/job`                                                                                   |
-| LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
+| Area | Key Routes | Auth Notes |
+| --- | --- | --- |
+| Health | `GET /health` | Public. |
+| Auth | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/me` | Profile routes require JWT. |
+| Settings | `GET/PUT /settings`, `GET/PUT/DELETE /settings/provider-keys` | JWT required; provider keys are encrypted at rest. |
+| Projects | `POST /projects/index`, `GET /projects`, `GET /projects/:id` | Indexing requires JWT. Listing is public, with optional `mine=true` when authenticated. Owned project details return `403` unless the requester owns them. |
+| Knowledge Graph | `GET /knowledge-graph?userId=<id>` | Public read route. Pass `userId` explicitly to scope results. |
+| Resumes | `POST /resumes/ingest`, `GET /resumes`, `GET /resumes/:id`, section `generate`/`improve`/`PATCH` routes | JWT required; user ownership is derived from the token. |
+| Conversations | `POST /conversations/session`, `POST /conversations/session/:id/respond`, `GET /conversations/session/:id` | JWT required; session ownership is token-scoped. |
+| Retrieval | `POST /retrieval/tailor`, `GET /retrieval/tailored` | JWT required; `userId` is derived from the token. |
+| Job Intelligence | `POST /intelligence/job` | JWT required; portfolio matching is token-scoped. |
+| Developer Profile | `POST /profiles/developer-report` | JWT required; gathers the current user's resumes, projects, and persona insights. |
+| LLM Catalogs | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags` | Public catalog endpoints. |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `docs/frontend.md` for payload shapes and sample responses, and `docs/frontendv2.md` for resume-section editing and developer-report flows.
 
 ## Security Notes
 
@@ -105,6 +108,13 @@ See `frontend.MD` for payload shapes and sample responses.
 - JWTs signed with `AUTH_JWT_SECRET`; send in `Authorization` header.
 - Provider keys encrypted using AES-256-GCM with `APP_ENCRYPTION_KEY` before storing.
 - Optional auth middleware attaches `req.user` for read-only routes; protected routers enforce `authenticate`.
+
+## Operational Notes
+
+- Keep `CORS_ALLOWED_ORIGINS` aligned with each frontend origin; browser requests fail before reaching route handlers when the origin is missing.
+- Resume, retrieval, job-intelligence, conversation, profile, and settings requests ignore any client-supplied `userId`; they derive ownership from `req.user.id`.
+- `GET /knowledge-graph` does not infer JWT scope. Use `?userId=<id>` when the caller needs a user-specific graph.
+- Local project indexing requires the API process to read the provided filesystem path. GitHub indexing clones from the provided `repoUrl` and optional `branch`.
 
 ## Additional Notes
 

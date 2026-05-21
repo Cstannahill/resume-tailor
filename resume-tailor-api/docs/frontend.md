@@ -9,7 +9,8 @@ Use this document as the source of truth for building React clients against the 
 ## Shared Patterns
 
 - Validate request bodies client-side; backend uses `zod` and returns 400 with issue details.
-- Query params (`search`, `technology`, `userId`, etc.) are optional; omit keys when not used.
+- Authenticated write routes derive ownership from the JWT. Do not send `userId` in resume, retrieval, job-intelligence, or profile bodies.
+- Query params (`search`, `technology`, `ownerId`, `mine`, `userId`, etc.) are optional; omit keys when not used.
 - All identifiers are UUID strings; persist them in client state/routing.
 
 ## Health
@@ -38,16 +39,22 @@ Use this document as the source of truth for building React clients against the 
   - Local indexing uses `{ "kind": "local", "path": "C:\\projects\\sample" }`.
   - Response includes `{ project, heuristics, summary }`.
 
-- **GET** `/projects?search=api&technology=TypeScript&mine=true` (set `mine=true` to restrict to current user)
+- **GET** `/projects?search=api&technology=TypeScript&mine=true`
 
-- **GET** `/projects/:projectId` *(auth required)*
+  - Public by default.
+  - Set `mine=true` with a bearer token to restrict to the current user.
+  - `ownerId=<uuid>` is also supported when building admin/debug tooling.
+
+- **GET** `/projects/:projectId`
+
+  - Public for unowned projects.
+  - Returns `403` for an owned project when the requester is unauthenticated or not the owner.
 
 ## Resumes Module
 
 - **POST** `/resumes/ingest` *(auth required)*
   ```json
   {
-    "userId": "user-123",
     "resumeText": "Plaintext or OCR output...",
     "sourceName": "May 2024 resume.pdf",
     "llmProvider": "google"
@@ -76,7 +83,6 @@ Use this document as the source of truth for building React clients against the 
 - **POST** `/retrieval/tailor` *(auth required)* to generate resume/cover-letter-style content with structured recommendations.
   ```json
   {
-    "userId": "user-123",
     "jobTitle": "Senior React Engineer",
     "jobDescription": "Full JD text...",
     "resumeId": "uuid-from-resume",
@@ -91,7 +97,11 @@ Use this document as the source of truth for building React clients against the 
 
 Visualize the relationship between projects, resumes, technologies, artifacts, and persona focus areas.
 
-- **GET** `/knowledge-graph?userId=user-123` *(defaults to current user if omitted)*
+- **GET** `/knowledge-graph?userId=user-123`
+
+  - Public read route.
+  - Pass `userId` explicitly to scope the graph to one user. Omitting it builds a graph across available records; it does not infer scope from the JWT.
+
 - Response:
   ```json
   {
@@ -128,7 +138,6 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```json
   {
     "jobDescription": "Full job description text...",
-    "userId": "user-123",
     "llmProvider": "google"
   }
   ```
@@ -161,14 +170,35 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
 
-## LLM Catalog Routes
-
 ## Auth & Settings
 
 - **POST** `/auth/register` / **POST** `/auth/login` → `{ token, user }`
 - **GET** `/auth/me` / **PUT** `/auth/me` *(auth required)* for profile updates
 - **GET/PUT** `/settings` *(auth)* to manage default provider + notification prefs
 - **GET** `/settings/provider-keys`, **PUT** `/settings/provider-keys`, **DELETE** `/settings/provider-keys/:provider` *(auth)* to manage encrypted provider keys
+
+## Developer Profile
+
+- **POST** `/profiles/developer-report` *(auth required)* to summarize the current user's resume highlights, persona insights, and indexed project evidence.
+  ```json
+  {
+    "llmProvider": "openrouter"
+  }
+  ```
+- Response:
+  ```json
+  {
+    "data": {
+      "developerOverview": "Full-stack engineer with strong TypeScript and cloud delivery experience...",
+      "coreStrengths": ["Turns ambiguous product needs into shipped systems"],
+      "growthOpportunities": ["Add fresher Kubernetes operations evidence"],
+      "projectEvidence": ["Project Atlas: Next.js analytics workspace..."],
+      "technicalDepth": ["Distributed systems", "LLM integrations"],
+      "riskCaveats": ["Limited mobile-platform evidence"],
+      "confidence": "medium"
+    }
+  }
+  ```
 
 ## LLM Catalog Routes
 
@@ -192,3 +222,4 @@ Upload/paste job descriptions to extract insights and compare against stored ass
 - `GET /llm/models`, `GET /llm/models/:provider` – multi-provider model catalogs.
 - `GET /knowledge-graph` – consolidated project/resume/technology/artifact/persona graph.
 - `POST /intelligence/job` – job description insights plus project/resume coverage analysis.
+- `POST /profiles/developer-report` – source-backed developer baseline report for the authenticated user.
