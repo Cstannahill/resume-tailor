@@ -4,12 +4,12 @@ Use this document as the source of truth for building React clients against the 
 
 - **Base URL**: `http://localhost:4000` (configurable)
 - **LLM Providers**: `ollama | bedrock | google | openrouter` (optional per request; backend defaults to `DEFAULT_LLM_PROVIDER`)
-- **Auth**: JWT bearer token (register/login before calling protected routes)
+- **Auth**: JWT bearer token (register/login before calling protected routes). Protected controllers derive `userId` from the token; do not send it in request bodies.
 
 ## Shared Patterns
 
 - Validate request bodies client-side; backend uses `zod` and returns 400 with issue details.
-- Query params (`search`, `technology`, `userId`, etc.) are optional; omit keys when not used.
+- Query params (`search`, `technology`, `ownerId`, `mine`, `userId`, etc.) are optional; omit keys when not used.
 - All identifiers are UUID strings; persist them in client state/routing.
 
 ## Health
@@ -40,16 +40,19 @@ Use this document as the source of truth for building React clients against the 
   - Local indexing uses `{ "kind": "local", "path": "C:\\projects\\sample" }`.
   - Response includes `{ project, heuristics, summary }`.
 
-- **GET** `/projects?search=api&technology=TypeScript&mine=true` (set `mine=true` to restrict to current user)
+- **GET** `/projects?search=api&technology=TypeScript&mine=true`
+  - Public route. `mine=true` only scopes to the current user when a bearer token is present.
+  - Use `ownerId=<uuid>` for an explicit owner filter.
 
-- **GET** `/projects/:projectId` _(auth required)_
+- **GET** `/projects/:projectId`
+  - Public for unowned projects.
+  - Returns `403` for owned projects unless the bearer token belongs to that owner.
 
 ## Resumes Module
 
 - **POST** `/resumes/ingest` _(auth required)_
   ```json
   {
-    "userId": "user-123",
     "resumeText": "Plaintext or OCR output...",
     "sourceName": "May 2024 resume.pdf",
     "llmProvider": "google"
@@ -78,7 +81,6 @@ Use this document as the source of truth for building React clients against the 
 - **POST** `/retrieval/tailor` _(auth required)_ to generate resume/cover-letter-style content with structured recommendations.
   ```json
   {
-    "userId": "user-123",
     "jobTitle": "Senior React Engineer",
     "jobDescription": "Full JD text...",
     "resumeId": "uuid-from-resume",
@@ -93,7 +95,9 @@ Use this document as the source of truth for building React clients against the 
 
 Visualize the relationship between projects, resumes, technologies, artifacts, and persona focus areas.
 
-- **GET** `/knowledge-graph?userId=user-123` _(defaults to current user if omitted)_
+- **GET** `/knowledge-graph?userId=user-123`
+  - Public read route.
+  - Omitting `userId` returns the unfiltered graph; the backend does not infer this filter from the bearer token.
 - Response:
   ```json
   {
@@ -160,7 +164,6 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```json
   {
     "jobDescription": "Full job description text...",
-    "userId": "user-123",
     "llmProvider": "google"
   }
   ```
@@ -203,8 +206,6 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
 
-## LLM Catalog Routes
-
 ## Auth & Settings
 
 - **POST** `/auth/register` / **POST** `/auth/login` → `{ token, user }`
@@ -226,7 +227,7 @@ Upload/paste job descriptions to extract insights and compare against stored ass
 4. **Job intelligence UI**: combine insights + coverage data into comparison tables with remediation CTAs.
 5. **Optimistic UX**: indexing/tailoring/job intelligence can take seconds; show progress indicators.
 6. **Error handling**: parse `error.details` (zod issues) for inline validation messaging.
-7. **State caching**: persist IDs plus JWT token securely (httpOnly cookies or encrypted storage).
+7. **State caching**: the current frontend stores JWTs and cached profiles in `localStorage`; revisit this before exposing the app to untrusted browsers.
 
 ## Recent Additions
 
