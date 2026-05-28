@@ -1,6 +1,6 @@
 # Resume Tailor API
 
-Modern Express + TypeScript (ESM) platform that indexes engineering projects, parses resumes, runs persona-based interviews, generates tailored job collateral, and surfaces knowledge graphs/intelligence insights. Everything is secured with JWT auth, user-specific settings, and encrypted provider keys on PostgreSQL via Prisma.
+Modern Express + TypeScript (ESM) platform that indexes engineering projects, parses resumes, runs persona-based interviews, generates tailored job collateral, and surfaces knowledge graphs/intelligence insights. Most write and user-specific workflows are secured with JWT auth; provider keys are stored per user and encrypted on PostgreSQL via Prisma.
 
 ## Feature Highlights
 
@@ -54,16 +54,17 @@ src/
 
 Copy `.env.example` → `.env` and fill:
 
-| Variable                                                       | Description                                |
-| -------------------------------------------------------------- | ------------------------------------------ | ------- | ------ | ----------- |
-| `DATABASE_URL`                                                 | PostgreSQL connection string               |
-| `DEFAULT_LLM_PROVIDER`                                         | `ollama                                    | bedrock | google | openrouter` |
-| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY`                            | Ollama Cloud config                        |
-| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock creds                          |
-| `GOOGLE_GENAI_API_KEY`                                         | Google GenAI key                           |
-| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`                    | OpenRouter config                          |
-| `AUTH_JWT_SECRET`                                              | Long random string for JWT signing         |
-| `APP_ENCRYPTION_KEY`                                           | Base64-encoded 32-byte key for AES-256-GCM |
+| Variable | Description |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `DEFAULT_LLM_PROVIDER` | One of `ollama`, `bedrock`, `google`, or `openrouter` |
+| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY` | Ollama Cloud config |
+| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock config |
+| `GOOGLE_GENAI_API_KEY` | Google GenAI key |
+| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL` | OpenRouter config |
+| `AUTH_JWT_SECRET` | Long random string for JWT signing; must be at least 32 characters |
+| `APP_ENCRYPTION_KEY` | Base64-encoded 32-byte key for AES-256-GCM |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated browser origins allowed to call the API; defaults to `http://localhost:3000` |
 
 ## Getting Started
 
@@ -78,7 +79,7 @@ Copy `.env.example` → `.env` and fill:
 | Script             | Description                                                 |
 | ------------------ | ----------------------------------------------------------- |
 | `npm run dev`      | Start Express via `tsx watch` (ESM hot reloading)           |
-| `npm run build`    | Type-check (tsc, no emit)                                   |
+| `npm run build`    | Compile TypeScript to `dist`                                |
 | `npm run start`    | Run compiled output (after `npm run build`)                 |
 | `npm run lint`     | ESLint (TS)                                                 |
 | `npm run prisma:*` | Prisma helpers (`migrate`, `studio`, `generate`, `db push`) |
@@ -89,22 +90,22 @@ Copy `.env.example` → `.env` and fill:
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
 | Auth             | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/me`                                              |
 | Settings         | `GET/PUT /settings`, `GET/PUT/DELETE /settings/provider-keys`                                              |
-| Projects         | `POST /projects/index`, `GET /projects`, `GET /projects/:id`                                               |
-| Knowledge Graph  | `GET /knowledge-graph?userId=<id>`                                                                         |
+| Projects         | `POST /projects/index`, `GET /projects` (public list), `GET /projects/:id` (public unless owner-scoped)    |
+| Knowledge Graph  | `GET /knowledge-graph?userId=<id>` (public read; optional `userId` filter)                                 |
 | Resumes          | `POST /resumes/ingest`, `GET /resumes`, `GET /resumes/:id`                                                 |
 | Conversations    | `POST /conversations/session`, `POST /conversations/session/:id/respond`, `GET /conversations/session/:id` |
 | Retrieval        | `POST /retrieval/tailor`, `GET /retrieval/tailored`                                                        |
 | Job Intelligence | `POST /intelligence/job`                                                                                   |
 | LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `docs/frontend.md` for payload shapes and sample responses.
 
 ## Security Notes
 
 - Passwords hashed via bcrypt (`bcryptjs`).
 - JWTs signed with `AUTH_JWT_SECRET`; send in `Authorization` header.
 - Provider keys encrypted using AES-256-GCM with `APP_ENCRYPTION_KEY` before storing.
-- Optional auth middleware attaches `req.user` for read-only routes; protected routers enforce `authenticate`.
+- Optional auth middleware attaches `req.user` for routes that can use identity opportunistically; protected routers enforce `authenticate`.
 
 ## Additional Notes
 

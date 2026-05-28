@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Resume Tailor Frontend
 
-## Getting Started
+Next.js application for the Experience Studio workspace. It signs users in to the Resume Tailor API, indexes projects, ingests resumes, runs persona coaching, generates tailored assets, and visualizes the knowledge graph built by the backend.
 
-First, run the development server:
+## Tech Stack
+
+- Next.js 16 + React 19 with the App Router
+- TypeScript and Tailwind CSS 4
+- TanStack Query for server state and request caching
+- `next-themes` for light/dark theme state
+- Local storage backed JWT session state in `src/contexts/auth-context.tsx`
+- PDF/DOCX export helpers in `src/lib/exporters.ts`
+
+## Local Setup
+
+1. Install dependencies from this package:
+
+```bash
+npm install
+```
+
+2. Configure the API base URL. Next.js reads public browser env vars from `.env.local`:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=http://localhost:4000
+```
+
+If the variable is omitted, `src/lib/constants.ts` defaults to `http://localhost:4000`.
+
+3. Start the frontend and backend in separate terminals:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`. The API must also be running for authenticated workspace features to load.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start the Next.js development server |
+| `npm run build` | Build the production app |
+| `npm run start` | Serve the production build |
+| `npm run lint` | Run ESLint |
 
-## Learn More
+## Application Structure
 
-To learn more about Next.js, take a look at the following resources:
+```text
+src/
+  app/                    # App Router pages for workspace, resume, cover letter, settings
+  components/
+    layout/               # App shell, navigation, auth actions
+    modules/              # Feature workbenches wired to API services
+    providers/            # Query, theme, auth, and toaster providers
+    ui/                   # Shared UI primitives
+  contexts/               # Auth context and profile refresh flow
+  hooks/                  # Resume draft state helpers
+  lib/                    # API client, auth storage, constants, exporters, utilities
+  services/               # Thin API wrappers per backend module
+  types/                  # Shared frontend request/response types
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Runtime Model
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `src/lib/api-client.ts` unwraps successful `{ data }` responses and throws `Error` instances from API error payloads.
+- The API client automatically attaches `Authorization: Bearer <token>` when `src/lib/auth-storage.ts` has a saved JWT.
+- `AuthProvider` loads cached user data first, then can refresh `/auth/me`; failed profile loads clear local auth state.
+- `AppProviders` configures TanStack Query with 60-second stale time, no window-focus refetch, one query retry, and no mutation retries.
+- Most feature components are client components because they depend on auth state, browser storage, or mutations.
 
-## Deploy on Vercel
+## Main Workflows
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Page | Source | Backing Services |
+| --- | --- | --- |
+| Workspace dashboard | `src/app/page.tsx` | Projects, resumes, conversations, retrieval, knowledge graph, LLM catalogs, developer reports |
+| Resume Studio | `src/app/resume/page.tsx` | Resume ingestion, section generation/improvement, section persistence |
+| Cover Letter Studio | `src/app/cover-letter/page.tsx` | Tailored asset generation plus job intelligence handoff |
+| Settings | `src/app/settings/page.tsx` | User defaults and encrypted provider-key management |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Key API wrappers live in `src/services/*.ts`. Keep new backend calls behind these service helpers so components do not duplicate URL construction, auth headers, or response unwrapping.
+
+## Developer Notes
+
+- Public environment variables must start with `NEXT_PUBLIC_`; server-only secrets do not belong in this package.
+- JWTs and cached user profiles are stored in `localStorage`, so auth access is client-only and should stay behind `AuthWall` or auth-aware components.
+- `NEXT_PUBLIC_API_BASE_URL` must point at an API origin allowed by the backend `CORS_ALLOWED_ORIGINS` setting.
+- Service functions expect the backend envelope shape documented in `docs/frontend.md`.
+- Resume section workflows and the developer baseline report are documented in `docs/frontendv2.md`.
+
+## Troubleshooting
+
+- `Unauthorized`: sign in again; the frontend clears cached auth state after failed `/auth/me` profile loads.
+- Browser CORS error: add the frontend origin, usually `http://localhost:3000`, to the API `CORS_ALLOWED_ORIGINS`.
+- Empty dashboard data: create an account, then ingest a resume or index a project. Protected list routes are scoped to the signed-in user.
+- Model/provider failures: confirm provider keys in Settings or backend env defaults before retrying generation flows.
