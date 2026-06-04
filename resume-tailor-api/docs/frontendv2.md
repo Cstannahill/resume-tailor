@@ -4,7 +4,7 @@ This addendum tracks the latest resume-section editing APIs so the React workspa
 
 ## Auth Reminder
 
-All resume endpoints require a valid JWT (`Authorization: Bearer <token>`). Reuse the existing `/auth/login` flow documented in `frontend.MD`.
+All resume endpoints require a valid JWT (`Authorization: Bearer <token>`). Reuse the existing `/auth/login` flow documented in `frontend.md`.
 
 ## Resume Section Workflows
 
@@ -47,7 +47,7 @@ Body:
   }
   ```
 - Frontend: show the bullets + rationale, offer “Apply” to persist (see PATCH below).
-- Server now auto-enriches prompts with resume summary/skills, indexed project highlights, and persona-coach insights, so you only need to send deltas from the UI.
+- Server-side prompt enrichment uses the shared [user context pipeline](user-context.md), so the UI only needs to send task-specific deltas.
 
 ### 2. Improve Existing Content
 
@@ -114,7 +114,7 @@ Body:
 ```
 
 - Requires authentication.
-- The backend automatically gathers resume highlights, persona insights, and project summaries before asking the LLM.
+- The backend automatically gathers resume highlights, persona insights, and project summaries through the [user context pipeline](user-context.md) before asking the LLM.
 - Response shape:
   ```json
   {
@@ -138,4 +138,4 @@ Body:
 - Missing resume or trying to edit someone else’s resume → `403/404`.
 - LLM failures still return 200 with `content` fallback (raw text) and `rationale` describing parse issues.
 
-Keep `frontend.MD` as the canonical reference for legacy routes; use this addendum only for the new resume-section editing surface. Update your client services accordingly.***
+Keep `frontend.md` as the canonical reference for legacy routes; use this addendum for resume-section editing and profile-report additions. Update your client services accordingly.

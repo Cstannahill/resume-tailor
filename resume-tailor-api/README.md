@@ -54,16 +54,16 @@ src/
 
 Copy `.env.example` → `.env` and fill:
 
-| Variable                                                       | Description                                |
-| -------------------------------------------------------------- | ------------------------------------------ | ------- | ------ | ----------- |
-| `DATABASE_URL`                                                 | PostgreSQL connection string               |
-| `DEFAULT_LLM_PROVIDER`                                         | `ollama                                    | bedrock | google | openrouter` |
-| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY`                            | Ollama Cloud config                        |
-| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock creds                          |
-| `GOOGLE_GENAI_API_KEY`                                         | Google GenAI key                           |
-| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`                    | OpenRouter config                          |
-| `AUTH_JWT_SECRET`                                              | Long random string for JWT signing         |
-| `APP_ENCRYPTION_KEY`                                           | Base64-encoded 32-byte key for AES-256-GCM |
+| Variable                                                       | Description                                                    |
+| -------------------------------------------------------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`                                                 | PostgreSQL connection string                                   |
+| `DEFAULT_LLM_PROVIDER`                                         | Default provider: `ollama`, `bedrock`, `google`, or `openrouter` |
+| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY`                            | Ollama Cloud config                                            |
+| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock creds                                              |
+| `GOOGLE_GENAI_API_KEY`                                         | Google GenAI key                                               |
+| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`                    | OpenRouter config                                              |
+| `AUTH_JWT_SECRET`                                              | Long random string for JWT signing                             |
+| `APP_ENCRYPTION_KEY`                                           | Base64-encoded 32-byte key for AES-256-GCM                     |
 
 ## Getting Started
 
@@ -95,9 +95,10 @@ Copy `.env.example` → `.env` and fill:
 | Conversations    | `POST /conversations/session`, `POST /conversations/session/:id/respond`, `GET /conversations/session/:id` |
 | Retrieval        | `POST /retrieval/tailor`, `GET /retrieval/tailored`                                                        |
 | Job Intelligence | `POST /intelligence/job`                                                                                   |
+| Profiles         | `POST /profiles/developer-report`                                                                          |
 | LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `docs/frontend.md` for core payload shapes, `docs/frontendv2.md` for resume-section workflows, and `docs/user-context.md` for the shared context pipeline behind developer reports and resume enrichment.
 
 ## Security Notes
 
