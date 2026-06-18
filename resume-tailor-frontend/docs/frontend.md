@@ -9,7 +9,7 @@ Use this document as the source of truth for building React clients against the 
 ## Shared Patterns
 
 - Validate request bodies client-side; backend uses `zod` and returns 400 with issue details.
-- Query params (`search`, `technology`, `userId`, etc.) are optional; omit keys when not used.
+- Query params (`search`, `technology`, `ownerId`, `mine`, `userId`, etc.) are optional; omit keys when not used. `userId` is only a query parameter for `/knowledge-graph`, not a request-body field for protected workflows.
 - All identifiers are UUID strings; persist them in client state/routing.
 
 ## Health
@@ -40,21 +40,21 @@ Use this document as the source of truth for building React clients against the 
   - Local indexing uses `{ "kind": "local", "path": "C:\\projects\\sample" }`.
   - Response includes `{ project, heuristics, summary }`.
 
-- **GET** `/projects?search=api&technology=TypeScript&mine=true` (set `mine=true` to restrict to current user)
+- **GET** `/projects?search=api&technology=TypeScript&mine=true` (public; set `mine=true` with a JWT to restrict to the current user, or pass `ownerId` explicitly)
 
-- **GET** `/projects/:projectId` _(auth required)_
+- **GET** `/projects/:projectId` (public for unowned projects; owned projects require the owner's JWT)
 
 ## Resumes Module
 
 - **POST** `/resumes/ingest` _(auth required)_
   ```json
   {
-    "userId": "user-123",
     "resumeText": "Plaintext or OCR output...",
     "sourceName": "May 2024 resume.pdf",
     "llmProvider": "google"
   }
   ```
+  - `resumeText` must include at least 50 characters. The backend derives the user from the JWT.
 - Response: `{ record: Resume, insight: ResumeInsight }`
 
 - **GET** `/resumes` _(current user)_
@@ -78,7 +78,6 @@ Use this document as the source of truth for building React clients against the 
 - **POST** `/retrieval/tailor` _(auth required)_ to generate resume/cover-letter-style content with structured recommendations.
   ```json
   {
-    "userId": "user-123",
     "jobTitle": "Senior React Engineer",
     "jobDescription": "Full JD text...",
     "resumeId": "uuid-from-resume",
@@ -87,13 +86,14 @@ Use this document as the source of truth for building React clients against the 
     "llmProvider": "ollama"
   }
   ```
+  - `jobTitle` is required and `jobDescription` must include at least 30 characters. The backend derives the user from the JWT.
 - **GET** `/retrieval/tailored` _(auth required)_ to list previous assets.
 
 ## Knowledge Graph API
 
 Visualize the relationship between projects, resumes, technologies, artifacts, and persona focus areas.
 
-- **GET** `/knowledge-graph?userId=user-123` _(defaults to current user if omitted)_
+- **GET** `/knowledge-graph?userId=user-123` (public; omit `userId` to return the consolidated graph across available records)
 - Response:
   ```json
   {
@@ -160,10 +160,10 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```json
   {
     "jobDescription": "Full job description text...",
-    "userId": "user-123",
     "llmProvider": "google"
   }
   ```
+  - `jobDescription` must include at least 50 characters. The backend derives the user from the JWT.
 - Response:
   ```json
   {
@@ -203,14 +203,13 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
 
-## LLM Catalog Routes
-
 ## Auth & Settings
 
 - **POST** `/auth/register` / **POST** `/auth/login` → `{ token, user }`
 - **GET** `/auth/me` / **PUT** `/auth/me` _(auth required)_ for profile updates
 - **GET/PUT** `/settings` _(auth)_ to manage default provider + notification prefs
 - **GET** `/settings/provider-keys`, **PUT** `/settings/provider-keys`, **DELETE** `/settings/provider-keys/:provider` _(auth)_ to manage encrypted provider keys
+- **POST** `/profiles/developer-report` _(auth)_ to generate a developer baseline report from resumes, projects, and persona sessions
 
 ## LLM Catalog Routes
 
