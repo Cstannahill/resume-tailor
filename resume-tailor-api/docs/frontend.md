@@ -40,19 +40,19 @@ Use this document as the source of truth for building React clients against the 
 
 - **GET** `/projects?search=api&technology=TypeScript&mine=true` (set `mine=true` to restrict to current user)
 
-- **GET** `/projects/:projectId` *(auth required)*
+- **GET** `/projects/:projectId` uses optional auth. Public projects are readable without a token; owned projects return `403` unless the token belongs to the owner.
 
 ## Resumes Module
 
 - **POST** `/resumes/ingest` *(auth required)*
   ```json
   {
-    "userId": "user-123",
     "resumeText": "Plaintext or OCR output...",
     "sourceName": "May 2024 resume.pdf",
     "llmProvider": "google"
   }
   ```
+- The backend derives `userId` from the JWT, so do not send it in the body.
 - Response: `{ record: Resume, insight: ResumeInsight }`
 
 - **GET** `/resumes` *(current user)*
@@ -61,6 +61,14 @@ Use this document as the source of truth for building React clients against the 
 ## Conversations (persona coaching)
 
 - **POST** `/conversations/session` *(auth required)* to start.
+  ```json
+  {
+    "personaTopic": "frontend-react",
+    "focusAreas": ["performance", "leadership"],
+    "llmProvider": "openrouter"
+  }
+  ```
+  Response: `{ session, initialQuestion }`.
 - **POST** `/conversations/session/:sessionId/respond` *(auth required)*:
   ```json
   {
@@ -76,7 +84,6 @@ Use this document as the source of truth for building React clients against the 
 - **POST** `/retrieval/tailor` *(auth required)* to generate resume/cover-letter-style content with structured recommendations.
   ```json
   {
-    "userId": "user-123",
     "jobTitle": "Senior React Engineer",
     "jobDescription": "Full JD text...",
     "resumeId": "uuid-from-resume",
@@ -85,13 +92,14 @@ Use this document as the source of truth for building React clients against the 
     "llmProvider": "ollama"
   }
   ```
+- The backend derives `userId` from the JWT. `assetType` can be `resume`, `cover_letter`, or `summary`; when omitted, the service stores `summary`.
 - **GET** `/retrieval/tailored` *(auth required)* to list previous assets.
 
 ## Knowledge Graph API
 
 Visualize the relationship between projects, resumes, technologies, artifacts, and persona focus areas.
 
-- **GET** `/knowledge-graph?userId=user-123` *(defaults to current user if omitted)*
+- **GET** `/knowledge-graph?userId=user-123` is public. Passing `userId` scopes resumes, sessions, and projects to that user; omitting it returns an unscoped graph of indexed projects plus unscoped counts where available.
 - Response:
   ```json
   {
@@ -128,10 +136,10 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```json
   {
     "jobDescription": "Full job description text...",
-    "userId": "user-123",
     "llmProvider": "google"
   }
   ```
+- The backend derives `userId` from the JWT.
 - Response:
   ```json
   {
@@ -161,20 +169,38 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
 
-## LLM Catalog Routes
-
 ## Auth & Settings
 
 - **POST** `/auth/register` / **POST** `/auth/login` → `{ token, user }`
 - **GET** `/auth/me` / **PUT** `/auth/me` *(auth required)* for profile updates
-- **GET/PUT** `/settings` *(auth)* to manage default provider + notification prefs
-- **GET** `/settings/provider-keys`, **PUT** `/settings/provider-keys`, **DELETE** `/settings/provider-keys/:provider` *(auth)* to manage encrypted provider keys
+- **GET/PUT** `/settings` *(auth)* to manage persisted default provider + notification prefs.
+  ```json
+  {
+    "defaultLlmProvider": "ollama",
+    "notificationPrefs": {
+      "jobMatches": true,
+      "productUpdates": false
+    }
+  }
+  ```
+- **GET** `/settings/provider-keys` *(auth)* lists configured providers without exposing secret material.
+- **PUT** `/settings/provider-keys` *(auth)* stores an encrypted key:
+  ```json
+  {
+    "provider": "openrouter",
+    "apiKey": "sk-..."
+  }
+  ```
+- **DELETE** `/settings/provider-keys/:provider` *(auth)* returns `204` with an empty body.
+- Current constraint: saved provider keys and `defaultLlmProvider` are persisted account data, but runtime LLM adapters still read server env vars and request-level `llmProvider`.
 
 ## LLM Catalog Routes
 
 - **GET** `/llm/models`
 - **GET** `/llm/models/:provider`
 - **GET** `/llm/ollama/tags`
+
+Model catalogs use server env credentials. `/llm/models` caches provider catalogs for 10 minutes; `/llm/ollama/tags` uses the Ollama tags cache.
 
 ## Implementation Tips
 
