@@ -38,7 +38,7 @@ cd ../resume-tailor-api
 cp .env.example .env
 
 cd ../resume-tailor-frontend
-cp .env.example .env
+printf "NEXT_PUBLIC_API_BASE_URL=http://localhost:4000\n" > .env.local
 ```
 
 3. Update env values:
@@ -48,8 +48,8 @@ cp .env.example .env
   - Set `AUTH_JWT_SECRET`
   - Set `APP_ENCRYPTION_KEY` (base64 32-byte key)
   - Configure one or more LLM providers (`OLLAMA_*`, `BEDROCK_*`, `GOOGLE_GENAI_API_KEY`, `OPENROUTER_*`)
-- Frontend (`resume-tailor-frontend/.env`)
-  - Set `NEXT_PUBLIC_API_BASE_URL` (default: `http://localhost:4000`)
+- Frontend (`resume-tailor-frontend/.env.local`)
+  - Set `NEXT_PUBLIC_API_BASE_URL` in `.env.local` (default: `http://localhost:4000`)
 
 4. Initialize database (API package):
 
