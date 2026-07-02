@@ -5,12 +5,14 @@ Use this document as the source of truth for building React clients against the 
 - **Base URL**: `http://localhost:4000` (configurable)
 - **LLM Providers**: `ollama | bedrock | google | openrouter` (optional per request; backend defaults to `DEFAULT_LLM_PROVIDER`)
 - **Auth**: JWT bearer token (register/login before calling protected routes)
+- **Related docs**: use `frontendv2.md` for resume-section editing and developer reports; use `cover-letter.md` for JSON collateral parsing notes.
 
 ## Shared Patterns
 
 - Validate request bodies client-side; backend uses `zod` and returns 400 with issue details.
-- Query params (`search`, `technology`, `userId`, etc.) are optional; omit keys when not used.
+- Query params (`search`, `technology`, `ownerId`, `mine`, `userId`, etc.) are optional; omit keys when not used.
 - All identifiers are UUID strings; persist them in client state/routing.
+- Protected write routes derive `userId` from the JWT. Do not include `userId` in request bodies unless a route explicitly documents it.
 
 ## Health
 
@@ -38,25 +40,31 @@ Use this document as the source of truth for building React clients against the 
   - Local indexing uses `{ "kind": "local", "path": "C:\\projects\\sample" }`.
   - Response includes `{ project, heuristics, summary }`.
 
-- **GET** `/projects?search=api&technology=TypeScript&mine=true` (set `mine=true` to restrict to current user)
+- **GET** `/projects?search=api&technology=TypeScript&mine=true`
+  - Public route. Send a bearer token with `mine=true` to restrict to the current user.
+  - `ownerId=<uuid>` filters by a specific owner when known.
 
-- **GET** `/projects/:projectId` *(auth required)*
+- **GET** `/projects/:projectId`
+  - Public for unowned project records.
+  - Owned records return `403` unless the bearer token belongs to the owner.
 
 ## Resumes Module
 
 - **POST** `/resumes/ingest` *(auth required)*
   ```json
   {
-    "userId": "user-123",
     "resumeText": "Plaintext or OCR output...",
     "sourceName": "May 2024 resume.pdf",
     "llmProvider": "google"
   }
   ```
-- Response: `{ record: Resume, insight: ResumeInsight }`
+- `resumeText` must be at least 50 characters. The frontend form may enforce a higher threshold for quality.
+- Response: `{ record: Resume, insight: ResumeInsight }`.
 
 - **GET** `/resumes` *(current user)*
 - **GET** `/resumes/:resumeId`
+  - List/get return persisted resume records with fields such as `extractedSummary`, `skills`, `experience`, `education`, and `contact`. They do not re-create the ingest-only `insight` wrapper.
+  - Section editing endpoints live in `frontendv2.md`.
 
 ## Conversations (persona coaching)
 
@@ -76,7 +84,6 @@ Use this document as the source of truth for building React clients against the 
 - **POST** `/retrieval/tailor` *(auth required)* to generate resume/cover-letter-style content with structured recommendations.
   ```json
   {
-    "userId": "user-123",
     "jobTitle": "Senior React Engineer",
     "jobDescription": "Full JD text...",
     "resumeId": "uuid-from-resume",
@@ -85,13 +92,18 @@ Use this document as the source of truth for building React clients against the 
     "llmProvider": "ollama"
   }
   ```
+- `assetType` is `resume`, `cover_letter`, or `summary`; omit it to store a `summary`.
+- Response: `{ record, recommendations }`, where `recommendations` includes `projectHighlights`, `resumeBullets`, and `alignmentNotes`. If the model returns unstructured text, the API stores the raw content and returns empty recommendation arrays with an explanatory note.
 - **GET** `/retrieval/tailored` *(auth required)* to list previous assets.
 
 ## Knowledge Graph API
 
 Visualize the relationship between projects, resumes, technologies, artifacts, and persona focus areas.
 
-- **GET** `/knowledge-graph?userId=user-123` *(defaults to current user if omitted)*
+- **GET** `/knowledge-graph?userId=user-123`
+  - Public route; authentication is optional and does not change scoping by itself.
+  - Omitting `userId` returns unscoped resume/session graph data.
+  - Supplying `userId` filters resumes and conversation sessions only; indexed projects remain global in the current implementation.
 - Response:
   ```json
   {
@@ -128,7 +140,6 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```json
   {
     "jobDescription": "Full job description text...",
-    "userId": "user-123",
     "llmProvider": "google"
   }
   ```
@@ -161,8 +172,6 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
 
-## LLM Catalog Routes
-
 ## Auth & Settings
 
 - **POST** `/auth/register` / **POST** `/auth/login` → `{ token, user }`
@@ -170,11 +179,24 @@ Upload/paste job descriptions to extract insights and compare against stored ass
 - **GET/PUT** `/settings` *(auth)* to manage default provider + notification prefs
 - **GET** `/settings/provider-keys`, **PUT** `/settings/provider-keys`, **DELETE** `/settings/provider-keys/:provider` *(auth)* to manage encrypted provider keys
 
+## Profile
+
+- **POST** `/profiles/developer-report` *(auth required)* to summarize the user's known developer baseline.
+  ```json
+  {
+    "llmProvider": "openrouter"
+  }
+  ```
+- The API gathers the user's latest resume, up to three owned project highlights, persona-coach insights, and other stored insights before prompting the LLM.
+- Response fields: `developerOverview`, `coreStrengths`, `growthOpportunities`, `projectEvidence`, `technicalDepth`, `riskCaveats`, and `confidence`.
+
 ## LLM Catalog Routes
 
 - **GET** `/llm/models`
 - **GET** `/llm/models/:provider`
 - **GET** `/llm/ollama/tags`
+- Catalog routes are public.
+- Provider model catalogs are cached for 10 minutes. The raw Ollama tags helper is cached for 5 minutes.
 
 ## Implementation Tips
 
@@ -188,7 +210,10 @@ Upload/paste job descriptions to extract insights and compare against stored ass
 
 ## Recent Additions
 
-- `GET /llm/ollama/tags` – cached Ollama Cloud model tags (5-minute TTL).
-- `GET /llm/models`, `GET /llm/models/:provider` – multi-provider model catalogs.
-- `GET /knowledge-graph` – consolidated project/resume/technology/artifact/persona graph.
-- `POST /intelligence/job` – job description insights plus project/resume coverage analysis.
+- `POST /profiles/developer-report` - developer baseline report built from shared user context.
+- Resume-section generate/improve/PATCH endpoints - see `frontendv2.md`.
+- `POST /retrieval/tailor` - supports `summary` (default), `resume`, and `cover_letter` assets.
+- `GET /llm/ollama/tags` - cached Ollama Cloud model tags (5-minute TTL).
+- `GET /llm/models`, `GET /llm/models/:provider` - multi-provider model catalogs (10-minute TTL).
+- `GET /knowledge-graph` - consolidated project/resume/technology/artifact/persona graph.
+- `POST /intelligence/job` - job description insights plus project/resume coverage analysis.

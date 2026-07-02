@@ -11,8 +11,11 @@ Modern Express + TypeScript (ESM) platform that indexes engineering projects, pa
   - Project indexing from GitHub or local paths with heuristics, metrics, and LLM summaries.
   - Knowledge graph API linking projects/resumes/technologies/artifacts/personas.
 - **Resume & Persona Coaching**
-  - Resume ingestion → structured insights + skill extraction.
+  - Resume ingestion -> structured insights + skill extraction.
+  - Resume-section generation, improvement, and PATCH updates for the builder UI.
   - Persona conversations with adaptive questioning, evaluation, and layered insights.
+- **Developer Profile**
+  - Developer baseline report that summarizes resume, indexed project, persona, and insight evidence.
 - **Retrieval & Job Intelligence**
   - Tailored resume/cover-letter generation tied to stored assets.
   - Job description analyzer that highlights required tech, seniority signals, cultural cues, and matches against user portfolios.
@@ -39,13 +42,18 @@ src/
   modules/
     auth/                    # Register/login/profile
     settings/                # User defaults & provider keys
-    projects/                # Indexing + knowledge graph
+    projects/                # Project indexing
     resumes/
     conversations/
+    profile/                 # User-context collection + developer report
     retrieval/
     intelligence/            # Job description analyzer
+    knowledgeGraph/          # Project/resume/persona graph assembly
+    llm/                     # Public model catalog endpoints
+  prompts/                   # Shared prompt builders for LLM workflows
   repositories/              # Prisma data access helpers
   routes/                    # Express routers per module
+  utils/                     # JWT, encryption, async, and JSON parsing helpers
   app.ts                     # Express bootstrap
   server.ts                  # Entrypoint
 ```
@@ -54,16 +62,17 @@ src/
 
 Copy `.env.example` → `.env` and fill:
 
-| Variable                                                       | Description                                |
-| -------------------------------------------------------------- | ------------------------------------------ | ------- | ------ | ----------- |
-| `DATABASE_URL`                                                 | PostgreSQL connection string               |
-| `DEFAULT_LLM_PROVIDER`                                         | `ollama                                    | bedrock | google | openrouter` |
-| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY`                            | Ollama Cloud config                        |
-| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock creds                          |
-| `GOOGLE_GENAI_API_KEY`                                         | Google GenAI key                           |
-| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`                    | OpenRouter config                          |
-| `AUTH_JWT_SECRET`                                              | Long random string for JWT signing         |
-| `APP_ENCRYPTION_KEY`                                           | Base64-encoded 32-byte key for AES-256-GCM |
+| Variable | Description |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string. |
+| `DEFAULT_LLM_PROVIDER` | Optional default provider: `ollama`, `bedrock`, `google`, or `openrouter` (defaults to `ollama`). |
+| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY` | Ollama Cloud config. `OLLAMA_BASE_URL` defaults to `https://ollama.com`. |
+| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock credentials. |
+| `GOOGLE_GENAI_API_KEY` | Google GenAI key. |
+| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL` | OpenRouter config. |
+| `AUTH_JWT_SECRET` | Long random string for JWT signing; must be at least 32 characters. |
+| `APP_ENCRYPTION_KEY` | Base64-encoded 32-byte key for AES-256-GCM provider-key encryption. |
+| `CORS_ALLOWED_ORIGINS` | Optional comma-separated frontend origins; defaults to `http://localhost:3000`. |
 
 ## Getting Started
 
@@ -78,26 +87,45 @@ Copy `.env.example` → `.env` and fill:
 | Script             | Description                                                 |
 | ------------------ | ----------------------------------------------------------- |
 | `npm run dev`      | Start Express via `tsx watch` (ESM hot reloading)           |
-| `npm run build`    | Type-check (tsc, no emit)                                   |
+| `npm run build`    | Compile TypeScript into `dist` with `tsc`                    |
 | `npm run start`    | Run compiled output (after `npm run build`)                 |
 | `npm run lint`     | ESLint (TS)                                                 |
 | `npm run prisma:*` | Prisma helpers (`migrate`, `studio`, `generate`, `db push`) |
 
 ## Core API Overview
 
-| Area             | Key Routes (all JSON, `Authorization: Bearer <token>` required unless noted)                               |
-| ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| Auth             | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/me`                                              |
-| Settings         | `GET/PUT /settings`, `GET/PUT/DELETE /settings/provider-keys`                                              |
-| Projects         | `POST /projects/index`, `GET /projects`, `GET /projects/:id`                                               |
-| Knowledge Graph  | `GET /knowledge-graph?userId=<id>`                                                                         |
-| Resumes          | `POST /resumes/ingest`, `GET /resumes`, `GET /resumes/:id`                                                 |
-| Conversations    | `POST /conversations/session`, `POST /conversations/session/:id/respond`, `GET /conversations/session/:id` |
-| Retrieval        | `POST /retrieval/tailor`, `GET /retrieval/tailored`                                                        |
-| Job Intelligence | `POST /intelligence/job`                                                                                   |
-| LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
+| Area | Key Routes | Auth notes |
+| --- | --- | --- |
+| Auth | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/me` | Register/login are public; profile read/update requires JWT. |
+| Settings | `GET/PUT /settings`, `GET/PUT/DELETE /settings/provider-keys` | JWT required; provider keys are encrypted before storage. |
+| Projects | `POST /projects/index`, `GET /projects`, `GET /projects/:id` | Indexing requires JWT. List/get are public, but owned project records return `403` unless requested by their owner. |
+| Knowledge Graph | `GET /knowledge-graph?userId=<id>` | Public. `userId` filters resumes and conversation sessions only; projects are included globally. |
+| Resumes | `POST /resumes/ingest`, `GET /resumes`, `GET /resumes/:id`, `POST /resumes/:id/sections/:section/generate`, `POST /resumes/:id/sections/:section/improve`, `PATCH /resumes/:id/sections/:section` | JWT required; `:section` is `summary`, `skills`, `experiences`, `education`, or `contact`. |
+| Conversations | `POST /conversations/session`, `POST /conversations/session/:id/respond`, `GET /conversations/session/:id` | JWT required. |
+| Retrieval | `POST /retrieval/tailor`, `GET /retrieval/tailored` | JWT required; `assetType` is `resume`, `cover_letter`, or `summary` (default). |
+| Job Intelligence | `POST /intelligence/job` | JWT required. |
+| Profile | `POST /profiles/developer-report` | JWT required; builds a developer baseline report from collected user context. |
+| LLM Catalogs | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags` | Public catalog routes. Provider catalogs cache for 10 minutes; Ollama tags cache for 5 minutes. |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `docs/frontend.md` for payload shapes and sample responses. See `docs/frontendv2.md` for resume-section editing and developer-report workflows.
+
+## Shared User Context
+
+`src/modules/profile/userContext.service.ts` centralizes the platform's "what do we know about this user?" snapshot:
+
+- latest resume summary, skills, and up to three experience highlights;
+- up to three owned project summaries/highlights;
+- conversation-derived persona insights;
+- other stored insight records for the user.
+
+The developer report endpoint and resume-section generate/improve endpoints both use this snapshot. Frontends should send only the user's immediate edits or job-specific deltas; the API enriches LLM prompts with stored context server-side.
+
+## Response Shape Notes
+
+- Successful API responses use `{ "data": ... }`; validation/errors use `{ "error": { "message": string, "details"?: unknown } }`.
+- `POST /resumes/ingest` returns `{ record, insight }` so the UI can display the fresh parse immediately.
+- `GET /resumes` and `GET /resumes/:id` return persisted `Resume` records with flat Prisma fields such as `extractedSummary`, `skills`, `experience`, `education`, and `contact`; they do not rewrap the record in an `insight` object.
+- Protected controllers derive `userId` from `req.user.id`. Do not accept client-supplied `userId` for protected write workflows.
 
 ## Security Notes
 
@@ -111,3 +139,4 @@ See `frontend.MD` for payload shapes and sample responses.
 - All TypeScript imports use explicit `.js` suffixes (NodeNext compatibility).
 - Repositories export typed helpers with dedicated `*.types.ts`.
 - Prompts for every LLM-driven workflow live in `src/prompts/basePrompts.ts` for consistent output.
+- `src/utils/json.ts` strips common Markdown fences/padding before JSON parsing for LLM responses. Retrieval, resume, conversation, and job-intelligence services use it before falling back to unstructured text paths.
