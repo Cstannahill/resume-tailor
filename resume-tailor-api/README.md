@@ -12,7 +12,10 @@ Modern Express + TypeScript (ESM) platform that indexes engineering projects, pa
   - Knowledge graph API linking projects/resumes/technologies/artifacts/personas.
 - **Resume & Persona Coaching**
   - Resume ingestion → structured insights + skill extraction.
+  - Resume-section generate/improve/patch workflows with server-side context enrichment.
   - Persona conversations with adaptive questioning, evaluation, and layered insights.
+- **Developer Profile**
+  - Baseline report generation from a user's latest resume, indexed projects, and persona insights.
 - **Retrieval & Job Intelligence**
   - Tailored resume/cover-letter generation tied to stored assets.
   - Job description analyzer that highlights required tech, seniority signals, cultural cues, and matches against user portfolios.
@@ -44,6 +47,8 @@ src/
     conversations/
     retrieval/
     intelligence/            # Job description analyzer
+    knowledgeGraph/          # Project/resume/technology/persona graph builder
+    profile/                 # Shared user context + developer baseline reports
   repositories/              # Prisma data access helpers
   routes/                    # Express routers per module
   app.ts                     # Express bootstrap
@@ -54,16 +59,19 @@ src/
 
 Copy `.env.example` → `.env` and fill:
 
-| Variable                                                       | Description                                |
-| -------------------------------------------------------------- | ------------------------------------------ | ------- | ------ | ----------- |
-| `DATABASE_URL`                                                 | PostgreSQL connection string               |
-| `DEFAULT_LLM_PROVIDER`                                         | `ollama                                    | bedrock | google | openrouter` |
-| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY`                            | Ollama Cloud config                        |
-| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock creds                          |
-| `GOOGLE_GENAI_API_KEY`                                         | Google GenAI key                           |
-| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`                    | OpenRouter config                          |
-| `AUTH_JWT_SECRET`                                              | Long random string for JWT signing         |
-| `APP_ENCRYPTION_KEY`                                           | Base64-encoded 32-byte key for AES-256-GCM |
+| Variable                                                       | Description                                                       |
+| -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `PORT`                                                         | API port; defaults to `4000` in `.env.example`                    |
+| `NODE_ENV`                                                     | Runtime environment label returned by `/health`                   |
+| `DATABASE_URL`                                                 | PostgreSQL connection string                                      |
+| `DEFAULT_LLM_PROVIDER`                                         | One of `ollama`, `bedrock`, `google`, or `openrouter`             |
+| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY`                            | Ollama Cloud config                                               |
+| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock creds                                                 |
+| `GOOGLE_GENAI_API_KEY`                                         | Google GenAI key                                                  |
+| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`                    | OpenRouter config                                                 |
+| `AUTH_JWT_SECRET`                                              | Long random string for JWT signing                                |
+| `APP_ENCRYPTION_KEY`                                           | Base64-encoded 32-byte key for AES-256-GCM                        |
+| `CORS_ALLOWED_ORIGINS`                                         | Comma-separated browser origins allowed to call the API with CORS |
 
 ## Getting Started
 
@@ -78,26 +86,27 @@ Copy `.env.example` → `.env` and fill:
 | Script             | Description                                                 |
 | ------------------ | ----------------------------------------------------------- |
 | `npm run dev`      | Start Express via `tsx watch` (ESM hot reloading)           |
-| `npm run build`    | Type-check (tsc, no emit)                                   |
+| `npm run build`    | Compile TypeScript to `dist/`                               |
 | `npm run start`    | Run compiled output (after `npm run build`)                 |
 | `npm run lint`     | ESLint (TS)                                                 |
 | `npm run prisma:*` | Prisma helpers (`migrate`, `studio`, `generate`, `db push`) |
 
 ## Core API Overview
 
-| Area             | Key Routes (all JSON, `Authorization: Bearer <token>` required unless noted)                               |
-| ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| Auth             | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/me`                                              |
-| Settings         | `GET/PUT /settings`, `GET/PUT/DELETE /settings/provider-keys`                                              |
-| Projects         | `POST /projects/index`, `GET /projects`, `GET /projects/:id`                                               |
-| Knowledge Graph  | `GET /knowledge-graph?userId=<id>`                                                                         |
-| Resumes          | `POST /resumes/ingest`, `GET /resumes`, `GET /resumes/:id`                                                 |
-| Conversations    | `POST /conversations/session`, `POST /conversations/session/:id/respond`, `GET /conversations/session/:id` |
-| Retrieval        | `POST /retrieval/tailor`, `GET /retrieval/tailored`                                                        |
-| Job Intelligence | `POST /intelligence/job`                                                                                   |
-| LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
+| Area             | Key Routes (all JSON, `Authorization: Bearer <token>` required unless noted)                                           |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Auth             | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/me`                                                          |
+| Settings         | `GET/PUT /settings`, `GET /settings/provider-keys`, `PUT /settings/provider-keys`, `DELETE /settings/provider-keys/:provider` |
+| Projects         | `POST /projects/index`, `GET /projects` (public, optionally narrowed with `mine=true` when authed), `GET /projects/:id` |
+| Knowledge Graph  | `GET /knowledge-graph`, `GET /knowledge-graph?userId=<id>` (public; `userId` filters resumes/persona sessions)        |
+| Resumes          | `POST /resumes/ingest`, `GET /resumes`, `GET /resumes/:id`, `POST/PATCH /resumes/:id/sections/:section...`             |
+| Conversations    | `POST /conversations/session`, `POST /conversations/session/:id/respond`, `GET /conversations/session/:id`             |
+| Retrieval        | `POST /retrieval/tailor`, `GET /retrieval/tailored`                                                                    |
+| Job Intelligence | `POST /intelligence/job`                                                                                               |
+| Profiles         | `POST /profiles/developer-report`                                                                                      |
+| LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags` (public)                                        |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `docs/frontend.md` for payload shapes, `docs/frontendv2.md` for resume-section/profile workflows, and `docs/cover-letter.md` for shared JSON parsing expectations.
 
 ## Security Notes
 
