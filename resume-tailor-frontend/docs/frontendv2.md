@@ -1,10 +1,10 @@
 # Frontend Integration Notes (v2 Enhancements)
 
-This addendum tracks the latest resume-section editing APIs so the React workspace can iterate quickly without diffing the entire backend.
+This addendum tracks the latest resume-section editing and profile-report APIs so the React workspace can iterate quickly without diffing the entire backend.
 
 ## Auth Reminder
 
-All resume endpoints require a valid JWT (`Authorization: Bearer <token>`). Reuse the existing `/auth/login` flow documented in `frontend.MD`.
+All resume and profile endpoints in this addendum require a valid JWT (`Authorization: Bearer <token>`). Reuse the existing `/auth/login` flow documented in `frontend.md`.
 
 ## Resume Section Workflows
 
@@ -47,6 +47,7 @@ Body:
   }
   ```
 - Frontend: show the bullets + rationale, offer “Apply” to persist (see PATCH below).
+- Server auto-enriches prompts with resume summary/skills, indexed project highlights, and persona-coach insights, so you only need to send deltas from the UI.
 
 ### 2. Improve Existing Content
 
@@ -100,10 +101,57 @@ Body:
 4. **Apply** uses `PATCH` to persist; re-sync local state with response.
 5. Track `experienceIndex` if the user reorders experiences; pass the index to provide context to the LLM.
 
+## User Context Aggregation
+
+`collectUserContext` is shared by resume-section suggestions and developer baseline reports. The server gathers:
+
+- The selected resume when a route already has one, otherwise the user's first listed resume.
+- Resume summary, skills, and up to 3 experience highlights.
+- Up to 3 indexed project highlights for the resume owner/current user.
+- Up to 4 persona-coach insights from conversation-sourced insight records.
+- Up to 4 additional non-conversation insights.
+
+Client implications:
+
+- For `POST /resumes/:resumeId/sections/:section/generate` and `/improve`, send only the UI-specific deltas in `context` (`jobTitle`, `company`, `experienceIndex`, `achievements`, `notes`, etc.). The API fills missing summary, skills, resume highlights, project evidence, persona insights, and additional insights before prompting.
+- Existing context values win. If the UI sends `skills` or `summary`, the API does not overwrite them with aggregated values.
+- Context notes are appended to `context.notes`, so keep user-entered notes concise and task-specific.
+
+## Developer Baseline Report
+
+Use this when you need a holistic picture of what the platform knows about a user (resume, persona coach sessions, indexed projects).
+
+```
+POST /profiles/developer-report
+Body:
+{
+  "llmProvider": "openrouter"
+}
+```
+
+- Requires authentication.
+- The backend automatically gathers resume highlights, persona insights, and project summaries before asking the LLM.
+- Response shape:
+  ```json
+  {
+    "data": {
+      "developerOverview": "Principled full-stack engineer with deep TypeScript + AWS experience...",
+      "coreStrengths": ["Owns complex migrations", "Measurable impact mindset"],
+      "growthOpportunities": ["Needs fresher Android exposure"],
+      "projectEvidence": ["Project Flow: GraphQL/Next.js platform ..."],
+      "technicalDepth": ["Distributed systems", "Observability"],
+      "riskCaveats": ["Limited Kubernetes ops history"],
+      "confidence": "medium"
+    }
+  }
+  ```
+- Use the report to seed review UIs or to double-check what context the model will lean on before generating assets.
+
 ## Error Handling
 
 - Invalid `:section` → backend returns `400`.
 - Missing resume or trying to edit someone else’s resume → `403/404`.
-- LLM failures still return 200 with `content` fallback (raw text) and `rationale` describing parse issues.
+- Resume-section LLM parse failures still return `200` with `content` fallback (raw text) and `rationale` describing parse issues.
+- Developer-report LLM parse failures throw an API error instead of returning a partial report because the profile service requires the structured report schema.
 
-Keep `frontend.MD` as the canonical reference for legacy routes; use this addendum only for the new resume-section editing surface. Update your client services accordingly.***
+Keep `frontend.md` as the canonical reference for legacy routes; use this addendum for resume-section editing, context enrichment, and developer baseline reports. Update your client services accordingly.

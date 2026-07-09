@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Resume Tailor Frontend
 
-## Getting Started
+Next.js App Router frontend for the Resume Tailor platform. The app signs users in, stores the API token in browser storage, and calls the Express API for project indexing, resume editing, persona coaching, tailored collateral, knowledge graphs, LLM catalogs, settings, and developer baseline reports.
 
-First, run the development server:
+## Local Setup
 
 ```bash
+npm install
+printf "NEXT_PUBLIC_API_BASE_URL=http://localhost:4000\n" > .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`. Keep the API running on the URL configured by `NEXT_PUBLIC_API_BASE_URL`; if the variable is omitted, `src/lib/constants.ts` falls back to `http://localhost:4000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Script | Description |
+| ------ | ----------- |
+| `npm run dev` | Start the Next.js dev server. |
+| `npm run build` | Build the production app. |
+| `npm run start` | Serve a production build. |
+| `npm run lint` | Run ESLint. |
 
-## Learn More
+## App Structure
 
-To learn more about Next.js, take a look at the following resources:
+```text
+src/
+  app/                         # App Router pages: dashboard, resume, cover-letter, settings
+  components/modules/          # Feature panels for auth, projects, resumes, retrieval, graph, LLM, profile
+  components/ui/               # Shared UI primitives
+  contexts/auth-context.tsx    # Auth state, profile refresh, login/register/logout
+  lib/api-client.ts            # Fetch wrapper for API base URL, JSON unwrapping, bearer token
+  services/                    # Typed API calls per backend module
+  types/                       # Shared frontend request/response types
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The dashboard (`src/app/page.tsx`) is gated by `AuthWall` and composes the main workflows: project indexing/listing, resume insights, tailored assets, persona coaching, knowledge graph, LLM catalogs, and the developer baseline report.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API and Auth Notes
 
-## Deploy on Vercel
+- `apiRequest` reads the token from `localStorage`, attaches `Authorization: Bearer <token>` when present, unwraps successful `{ data }` responses, and throws API error messages for non-2xx responses.
+- Register/login calls store both token and user profile through `src/contexts/auth-context.tsx`; a 401 clears cached auth state on the next profile load.
+- Most write workflows derive the user from the JWT on the API. Do not send `userId` from forms unless a documented public read endpoint explicitly accepts it.
+- The developer baseline card calls `POST /profiles/developer-report` with an optional `llmProvider` and displays the structured report returned by the API.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Reference Docs
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `docs/frontend.md` mirrors the canonical API integration notes.
+- `docs/frontendv2.md` covers resume-section editing, shared user-context enrichment, and developer baseline reports.
+- Backend setup and route coverage live in `../resume-tailor-api/README.md`.
+
+## Troubleshooting
+
+- **401 Unauthorized**: sign in again; the frontend stores tokens in browser `localStorage`.
+- **Network/CORS errors**: confirm the API is running and `resume-tailor-api/.env` includes the frontend origin in `CORS_ALLOWED_ORIGINS`.
+- **Unexpected API URL**: update `.env.local`, then restart `npm run dev` so Next.js reloads `NEXT_PUBLIC_API_BASE_URL`.
+- **Slow AI actions**: project indexing, resume generation, job intelligence, and developer reports call LLM providers and can take several seconds; keep loading states visible in feature panels.
