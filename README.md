@@ -38,18 +38,21 @@ cd ../resume-tailor-api
 cp .env.example .env
 
 cd ../resume-tailor-frontend
-cp .env.example .env
+printf "NEXT_PUBLIC_API_BASE_URL=http://localhost:4000\n" > .env.local
 ```
+
+The frontend package has no `.env.example`. Next.js only loads `NEXT_PUBLIC_*` values from `.env.local` (or other Next env files), not from a root `.env`.
 
 3. Update env values:
 
 - API (`resume-tailor-api/.env`)
   - Set `DATABASE_URL`
-  - Set `AUTH_JWT_SECRET`
-  - Set `APP_ENCRYPTION_KEY` (base64 32-byte key)
+  - Set `AUTH_JWT_SECRET` (at least 32 characters; the API refuses to start otherwise)
+  - Set `APP_ENCRYPTION_KEY` (base64 that decodes to exactly 32 bytes)
+  - Set `CORS_ALLOWED_ORIGINS` to include the frontend origin (`http://localhost:3000` by default)
   - Configure one or more LLM providers (`OLLAMA_*`, `BEDROCK_*`, `GOOGLE_GENAI_API_KEY`, `OPENROUTER_*`)
-- Frontend (`resume-tailor-frontend/.env`)
-  - Set `NEXT_PUBLIC_API_BASE_URL` (default: `http://localhost:4000`)
+- Frontend (`resume-tailor-frontend/.env.local`)
+  - Set `NEXT_PUBLIC_API_BASE_URL` (default in code: `http://localhost:4000`)
 
 4. Initialize database (API package):
 
@@ -83,7 +86,7 @@ Default local URLs:
 ### `resume-tailor-api`
 
 - `npm run dev` - Start API with `tsx watch`
-- `npm run build` - Compile TypeScript (`tsc`)
+- `npm run build` - Compile TypeScript to `dist/`
 - `npm run start` - Run compiled API from `dist`
 - `npm run lint` - Lint backend source
 - `npm run prisma:migrate` - Run Prisma migrations in dev
@@ -102,4 +105,5 @@ Default local URLs:
 
 - This repository is structured as a monorepo but does not currently use npm/pnpm/yarn workspaces at the root.
 - Each package manages its own dependencies and lockfile.
-- For deeper backend details and route coverage, see `resume-tailor-api/README.md`.
+- For backend routes, env constraints, and operational caveats, see `resume-tailor-api/README.md`.
+- For frontend architecture, auth storage, and troubleshooting, see `resume-tailor-frontend/README.md`.

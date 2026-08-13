@@ -1,22 +1,31 @@
 # Frontend Integration Notes
 
-Use this document as the source of truth for building React clients against the Experience API. All responses follow `{ "data": T }` on success or `{ "error": { "message": string, "details"?: unknown } }` on failure. Send and accept JSON (`Content-Type: application/json`).
+Use this document as the source of truth for building React clients against the Experience API. All responses follow `{ "data": T }` on success or `{ "error": { "message": string, "details"?: unknown } }` on failure. Send and accept JSON (`Content-Type: application/json`). Request bodies are capped at **2mb**.
 
-- **Base URL**: `http://localhost:4000` (configurable)
+- **Base URL**: `http://localhost:4000` (configurable via `PORT` / `NEXT_PUBLIC_API_BASE_URL`)
 - **LLM Providers**: `ollama | bedrock | google | openrouter` (optional per request; backend defaults to `DEFAULT_LLM_PROVIDER`)
 - **Auth**: JWT bearer token (register/login before calling protected routes)
 
 ## Shared Patterns
 
 - Validate request bodies client-side; backend uses `zod` and returns 400 with issue details.
-- Query params (`search`, `technology`, `userId`, etc.) are optional; omit keys when not used.
+- Query params (`search`, `technology`, `ownerId`, `mine`, `userId` on knowledge graph) are optional; omit keys when unused.
+- Protected write routes derive the user from the bearer token. Do **not** send `userId` in resume ingest, retrieval, job intelligence, conversations, or profile-report bodies.
 - All identifiers are UUID strings; persist them in client state/routing.
 
 ## Health
 
-| Route     | Method | Description             | Response                                                       |
-| --------- | ------ | ----------------------- | -------------------------------------------------------------- |
-| `/health` | GET    | Verify API availability | `{ "data": { "status": "ok", "environment": "development" } }` |
+| Route | Method | Auth | Response |
+| --- | --- | --- | --- |
+| `/health` | GET | Public | `{ "data": { "status": "ok", "environment": "development" } }` |
+
+## Auth & Settings
+
+- **POST** `/auth/register` — `{ email, password, displayName? }`. Password min length is 8. Returns `{ token, user }`.
+- **POST** `/auth/login` — `{ email, password }`. Returns `{ token, user }`.
+- **GET** `/auth/me` / **PUT** `/auth/me` *(auth)* — profile fetch; update body is `{ displayName? }`.
+- **GET/PUT** `/settings` *(auth)* — `{ defaultLlmProvider?, notificationPrefs? }`. The stored default is **not** currently consumed by `getLLMAdapter()`.
+- **GET/PUT/DELETE** `/settings/provider-keys` *(auth)* — encrypted key storage. List responses include `configured: true` and never the secret. **Adapters still read process env vars**, not these stored keys.
 
 ## Projects Module
 
@@ -35,33 +44,43 @@ Use this document as the source of truth for building React clients against the 
     "llmProvider": "ollama"
   }
   ```
-  - Local indexing uses `{ "kind": "local", "path": "C:\\projects\\sample" }`.
-  - Response includes `{ project, heuristics, summary }`.
+  - Local indexing uses `{ "kind": "local", "path": "/absolute/or/windows/path" }`.
+  - Response includes `{ project, heuristics, summary }`. Owner is set from the JWT.
 
-- **GET** `/projects?search=api&technology=TypeScript&mine=true` (set `mine=true` to restrict to current user)
+- **GET** `/projects?search=api&technology=TypeScript&mine=true` — public. `mine=true` requires a valid token and filters to the current user. `ownerId` is an explicit owner filter.
 
-- **GET** `/projects/:projectId` *(auth required)*
+- **GET** `/projects/:projectId` — public for ownerless projects; returns `403` when `ownerId` is set and does not match the bearer token.
 
 ## Resumes Module
 
 - **POST** `/resumes/ingest` *(auth required)*
   ```json
   {
-    "userId": "user-123",
     "resumeText": "Plaintext or OCR output...",
     "sourceName": "May 2024 resume.pdf",
     "llmProvider": "google"
   }
   ```
-- Response: `{ record: Resume, insight: ResumeInsight }`
+  - `resumeText` must be at least 50 characters.
+  - Response: `{ record: Resume, insight: ResumeInsight }`
 
-- **GET** `/resumes` *(current user)*
-- **GET** `/resumes/:resumeId`
+- **GET** `/resumes` *(current user only)*
+- **GET** `/resumes/:resumeId` *(owner only; 403/404 otherwise)*
+- Resume-section generate/improve/patch routes live in `frontendv2.md`.
 
 ## Conversations (persona coaching)
 
-- **POST** `/conversations/session` *(auth required)* to start.
-- **POST** `/conversations/session/:sessionId/respond` *(auth required)*:
+All conversation routes require auth. Session `userId` is taken from the JWT. Fetching another user's session returns `403`.
+
+- **POST** `/conversations/session`
+  ```json
+  {
+    "personaTopic": "frontend-react",
+    "focusAreas": ["hooks", "performance"],
+    "llmProvider": "ollama"
+  }
+  ```
+- **POST** `/conversations/session/:sessionId/respond`
   ```json
   {
     "userAnswer": "Detailed reasoning",
@@ -69,14 +88,13 @@ Use this document as the source of truth for building React clients against the 
     "llmProvider": "openrouter"
   }
   ```
-- **GET** `/conversations/session/:sessionId` *(auth required)*
+- **GET** `/conversations/session/:sessionId`
 
 ## Retrieval (tailored assets)
 
-- **POST** `/retrieval/tailor` *(auth required)* to generate resume/cover-letter-style content with structured recommendations.
+- **POST** `/retrieval/tailor` *(auth required)*
   ```json
   {
-    "userId": "user-123",
     "jobTitle": "Senior React Engineer",
     "jobDescription": "Full JD text...",
     "resumeId": "uuid-from-resume",
@@ -85,13 +103,13 @@ Use this document as the source of truth for building React clients against the 
     "llmProvider": "ollama"
   }
   ```
-- **GET** `/retrieval/tailored` *(auth required)* to list previous assets.
+  - `jobDescription` min length is 30. `assetType` is `resume | cover_letter | summary`.
+- **GET** `/retrieval/tailored` *(auth required)* lists assets for the current user.
 
 ## Knowledge Graph API
 
-Visualize the relationship between projects, resumes, technologies, artifacts, and persona focus areas.
-
-- **GET** `/knowledge-graph?userId=user-123` *(defaults to current user if omitted)*
+- **GET** `/knowledge-graph` or `/knowledge-graph?userId=<uuid>` *(public)*
+- `userId` filters **resume** and **conversation-session** nodes. Project nodes are always unscoped. Omitting `userId` does **not** fall back to the JWT user.
 - Response:
   ```json
   {
@@ -103,9 +121,7 @@ Visualize the relationship between projects, resumes, technologies, artifacts, a
         { "id": "persona:789", "type": "persona", "label": "backend-node" }
       ],
       "edges": [
-        { "id": "edge:tech-project:abc:123", "source": "technology:abc", "target": "project:123", "type": "technology_to_project" },
-        { "id": "edge:project-artifact:123:xyz", "source": "project:123", "target": "artifact:xyz", "type": "project_to_artifact" },
-        { "id": "edge:persona-tech:789:abc", "source": "persona:789", "target": "technology:abc", "type": "persona_focus" }
+        { "id": "edge:tech-project:abc:123", "source": "technology:abc", "target": "project:123", "type": "technology_to_project" }
       ],
       "summary": {
         "projectCount": 5,
@@ -118,77 +134,60 @@ Visualize the relationship between projects, resumes, technologies, artifacts, a
     }
   }
   ```
-- UI ideas: render force-directed graphs, filter by node type, surface `summary.topTechnologies` in dashboards.
 
 ## Job Intelligence
-
-Upload/paste job descriptions to extract insights and compare against stored assets.
 
 - **POST** `/intelligence/job` *(auth required)*
   ```json
   {
     "jobDescription": "Full job description text...",
-    "userId": "user-123",
     "llmProvider": "google"
+  }
+  ```
+- Response includes `insights` (role summary, seniority, required tech, cultural notes, risks) plus `matches` against the caller's projects/resumes and a `coverage` object (`covered` / `missing`).
+
+## Profiles
+
+- **POST** `/profiles/developer-report` *(auth required)*
+  ```json
+  {
+    "llmProvider": "openrouter"
   }
   ```
 - Response:
   ```json
   {
     "data": {
-      "insights": {
-        "roleSummary": "...",
-        "senioritySignals": ["Leads squads"],
-        "requiredTechnologies": [{ "name": "React", "importance": "core" }],
-        "culturalNotes": ["Bias toward async communication"],
-        "responsibilityThemes": ["Mentor engineers"],
-        "riskAlerts": ["Heavy on-call expectation"]
-      },
-      "matches": {
-        "projects": [
-          { "id": "project-uuid", "name": "GraphQL API", "summary": "...", "matchingTechnologies": ["React", "GraphQL"] }
-        ],
-        "resumes": [
-          { "id": "resume-uuid", "sourceName": "Resume 2024", "matchingSkills": ["React", "TypeScript"], "summary": "..." }
-        ],
-        "coverage": {
-          "covered": ["react", "graphql"],
-          "missing": ["apollo", "rust"]
-        }
-      }
+      "developerOverview": "...",
+      "coreStrengths": ["Owns complex migrations"],
+      "growthOpportunities": ["Needs fresher mobile exposure"],
+      "projectEvidence": ["Project Flow: GraphQL/Next.js platform ..."],
+      "technicalDepth": ["Distributed systems"],
+      "riskCaveats": ["Limited Kubernetes ops history"],
+      "confidence": "medium"
     }
   }
   ```
-- UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
+- Unparseable LLM JSON fails the request (`LLM returned unstructured developer profile.`). See `user-context.md` for the snapshot this route uses.
 
 ## LLM Catalog Routes
 
-## Auth & Settings
+Public. Catalogs cache in process memory.
 
-- **POST** `/auth/register` / **POST** `/auth/login` → `{ token, user }`
-- **GET** `/auth/me` / **PUT** `/auth/me` *(auth required)* for profile updates
-- **GET/PUT** `/settings` *(auth)* to manage default provider + notification prefs
-- **GET** `/settings/provider-keys`, **PUT** `/settings/provider-keys`, **DELETE** `/settings/provider-keys/:provider` *(auth)* to manage encrypted provider keys
-
-## LLM Catalog Routes
-
-- **GET** `/llm/models`
-- **GET** `/llm/models/:provider`
-- **GET** `/llm/ollama/tags`
+- **GET** `/llm/models` / **GET** `/llm/models/:provider` — provider catalogs; 10-minute TTL.
+- **GET** `/llm/ollama/tags` — Ollama Cloud tags; 5-minute TTL; requires `OLLAMA_API_KEY` on the server.
 
 ## Implementation Tips
 
-1. **API client**: centralize fetch logic to unwrap `{ data }`, capture `{ error }`, and attach base headers.
-2. **LLM selections**: pair `/llm/models` with forms to let users override providers/models.
-3. **Graph tooling**: memoize `/knowledge-graph`, provide filters/search, and surface summary stats.
-4. **Job intelligence UI**: combine insights + coverage data into comparison tables with remediation CTAs.
-5. **Optimistic UX**: indexing/tailoring/job intelligence can take seconds; show progress indicators.
-6. **Error handling**: parse `error.details` (zod issues) for inline validation messaging.
-7. **State caching**: persist IDs plus JWT token securely (httpOnly cookies or encrypted storage).
+1. Centralize fetch logic to unwrap `{ data }`, capture `{ error }`, and attach the bearer token.
+2. Pair `/llm/models` with forms so users can override `llmProvider` per request.
+3. Memoize `/knowledge-graph` and always pass `userId` when you want resume/persona scoping.
+4. Indexing, tailoring, job intelligence, and developer reports can take several seconds.
+5. Parse `error.details` (zod issues) for inline validation messaging.
+6. The current frontend stores the JWT in `localStorage` (`experience:auth-token`); treat that as a known constraint, not a recommendation for production.
 
-## Recent Additions
+## Related Docs
 
-- `GET /llm/ollama/tags` – cached Ollama Cloud model tags (5-minute TTL).
-- `GET /llm/models`, `GET /llm/models/:provider` – multi-provider model catalogs.
-- `GET /knowledge-graph` – consolidated project/resume/technology/artifact/persona graph.
-- `POST /intelligence/job` – job description insights plus project/resume coverage analysis.
+- `frontendv2.md` — resume-section generate/improve/patch and context enrichment.
+- `user-context.md` — snapshot fields, limits, and consumers.
+- `cover-letter.md` — shared JSON prompt/parsing behavior.
