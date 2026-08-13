@@ -1,16 +1,16 @@
 # Frontend Integration Notes (v2 Enhancements)
 
-This addendum tracks the latest resume-section editing APIs so the React workspace can iterate quickly without diffing the entire backend.
+This addendum tracks resume-section editing and developer-report APIs so the React workspace can iterate without diffing the entire backend.
 
 ## Auth Reminder
 
-All resume endpoints require a valid JWT (`Authorization: Bearer <token>`). Reuse the existing `/auth/login` flow documented in `frontend.MD`.
+All resume and profile endpoints in this addendum require a valid JWT (`Authorization: Bearer <token>`). Reuse `/auth/login` from `frontend.md`. The API derives `userId` from the token.
 
 ## Resume Section Workflows
 
-### 1. Generate a New Section
+`:section` is one of `summary | skills | experiences | education | contact`. Unsupported values return `400`.
 
-Use when the user wants brand-new bullets/summary/skills for a given experience or section.
+### 1. Generate a New Section
 
 ```
 POST /resumes/:resumeId/sections/:section/generate
@@ -32,7 +32,6 @@ Body:
 }
 ```
 
-- `:section` is one of `summary | skills | experiences | education | contact`.
 - Response
   ```json
   {
@@ -46,8 +45,8 @@ Body:
     }
   }
   ```
-- Frontend: show the bullets + rationale, offer “Apply” to persist (see PATCH below).
-- Server now auto-enriches prompts with resume summary/skills, indexed project highlights, and persona-coach insights, so you only need to send deltas from the UI.
+- Show bullets + rationale, then persist with PATCH.
+- The server auto-enriches prompts from stored resume/project/persona data. Send only UI deltas.
 
 ### 2. Improve Existing Content
 
@@ -69,8 +68,8 @@ Body:
 }
 ```
 
-- Response mirrors the `generate` endpoint with improved `content` + `rationale`.
-- Use when the user edits inline and wants “Make this better” behavior.
+- Response mirrors generate (`content` + `rationale`).
+- Use when the user edits inline and wants a rewrite.
 
 ### 3. Persist Section Updates
 
@@ -85,25 +84,29 @@ Body:
 }
 ```
 
-- The backend maps sections to the correct DB fields:
-  - `summary` → `extractedSummary` (string)
-  - `skills` → `string[]`
-  - `experiences` → array of `{ company?, role?, achievements[] }`
-  - `education` → array of entries
-  - `contact` → object `{ email?, phone?, ... }`
-- PATCH returns the updated resume record; re-fetch `/resumes/:id` if you need a full refresh.
+Field mapping:
 
-## UX Flow Suggestions
+| Section | Stored field | Shape |
+| --- | --- | --- |
+| `summary` | `extractedSummary` | string |
+| `skills` | `skills` | `string[]` |
+| `experiences` | `experience` | `{ company?, role?, achievements[] }[]` |
+| `education` | `education` | array of entries |
+| `contact` | `contact` | `{ email?, phone?, ... }` |
 
-1. **Load current resume** via `GET /resumes/:id` and allow inline editing per section.
-2. **“Generate suggestions”** button calls `/generate`, shows returned bullets/summary with rationale tag (“AI suggestion”).
-3. **“Improve existing”** button sends the current content and displays the LLM’s rewrite side-by-side.
-4. **Apply** uses `PATCH` to persist; re-sync local state with response.
-5. Track `experienceIndex` if the user reorders experiences; pass the index to provide context to the LLM.
+PATCH returns the updated resume record.
+
+## User Context Aggregation
+
+`collectUserContext` (`src/modules/profile/userContext.service.ts`) is shared by resume-section suggestions and developer baseline reports. Details and limits are in `user-context.md`.
+
+Client implications:
+
+- For generate/improve, send only task-specific `context` fields (`jobTitle`, `company`, `experienceIndex`, `achievements`, `notes`).
+- Existing client values win. If the UI sends `skills` or `summary`, the API does not overwrite them.
+- Composed snapshot notes are **appended** to `context.notes`. Keep user notes concise.
 
 ## Developer Baseline Report
-
-Use this when you need a holistic picture of what the platform knows about a user (resume, persona coach sessions, indexed projects).
 
 ```
 POST /profiles/developer-report
@@ -113,29 +116,15 @@ Body:
 }
 ```
 
-- Requires authentication.
-- The backend automatically gathers resume highlights, persona insights, and project summaries before asking the LLM.
-- Response shape:
-  ```json
-  {
-    "data": {
-      "developerOverview": "Principled full-stack engineer with deep TypeScript + AWS experience...",
-      "coreStrengths": ["Owns complex migrations", "Measurable impact mindset"],
-      "growthOpportunities": ["Needs fresher Android exposure"],
-      "projectEvidence": ["Project Flow: GraphQL/Next.js platform ..."],
-      "technicalDepth": ["Distributed systems", "Observability"],
-      "riskCaveats": ["Limited Kubernetes ops history"],
-      "confidence": "medium"
-    }
-  }
-  ```
-- Use the report to seed review UIs or to double-check what context the model will lean on before generating assets.
-
+- Auth required. `userId` comes from the JWT.
+- Expected JSON: `developerOverview`, `coreStrengths`, `growthOpportunities`, `projectEvidence`, `technicalDepth`, `riskCaveats`, `confidence` (`low | medium | high`).
+- Parse failures throw; unlike resume-section routes, this endpoint does **not** return a raw-text fallback.
 
 ## Error Handling
 
-- Invalid `:section` → backend returns `400`.
-- Missing resume or trying to edit someone else’s resume → `403/404`.
-- LLM failures still return 200 with `content` fallback (raw text) and `rationale` describing parse issues.
+- Invalid `:section` → `400`.
+- Missing resume or another user's resume → `404` / `403`.
+- Resume-section LLM parse failures still return `200` with raw `content` and a `rationale` describing the parse issue.
+- Developer-report LLM parse failures return an API error (`LLM returned unstructured developer profile.`).
 
-Keep `frontend.MD` as the canonical reference for legacy routes; use this addendum only for the new resume-section editing surface. Update your client services accordingly.***
+Keep `frontend.md` as the canonical reference for other routes. Use this addendum for resume-section editing, context enrichment, and developer baseline reports.
