@@ -97,7 +97,7 @@ Copy `.env.example` → `.env` and fill:
 | Job Intelligence | `POST /intelligence/job`                                                                                   |
 | LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `docs/README.md` for the doc index. Payload shapes live in `docs/frontend.md`. Indexing, validation limits, and scoping pitfalls are in `docs/project-indexing.md` and `docs/operational-runbook.md`.
 
 ## Security Notes
 
@@ -111,3 +111,4 @@ See `frontend.MD` for payload shapes and sample responses.
 - All TypeScript imports use explicit `.js` suffixes (NodeNext compatibility).
 - Repositories export typed helpers with dedicated `*.types.ts`.
 - Prompts for every LLM-driven workflow live in `src/prompts/basePrompts.ts` for consistent output.
+- Project indexing clones GitHub sources into a temp dir, analyzes at most 250 files, and upserts by `repoUrl` / `localPath` globally. See `docs/project-indexing.md`.

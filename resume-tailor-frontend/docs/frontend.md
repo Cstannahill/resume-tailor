@@ -88,6 +88,7 @@ Use this document as the source of truth for building React clients against the 
   }
   ```
 - **GET** `/retrieval/tailored` _(auth required)_ to list previous assets.
+- If `assetType` is omitted, the API stores **`summary`**. If `projectIds` is omitted, context is the three newest projects in the database (not owner-filtered). See `../../resume-tailor-api/docs/operational-runbook.md` and `app-workflows.md`.
 
 ## Knowledge Graph API
 
@@ -202,6 +203,7 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   }
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
+- `jobDescription` must be at least 50 characters. Project matches are the 25 newest projects whose `technologies` overlap required tech (not owner-filtered). Resume matches are the caller's. See `../../resume-tailor-api/docs/operational-runbook.md`.
 
 ## LLM Catalog Routes
 
@@ -234,3 +236,5 @@ Upload/paste job descriptions to extract insights and compare against stored ass
 - `GET /llm/models`, `GET /llm/models/:provider` – multi-provider model catalogs.
 - `GET /knowledge-graph` – consolidated project/resume/technology/artifact/persona graph.
 - `POST /intelligence/job` – job description insights plus project/resume coverage analysis.
+
+Studio page flows, exporters, and client vs API validation: [`app-workflows.md`](./app-workflows.md).

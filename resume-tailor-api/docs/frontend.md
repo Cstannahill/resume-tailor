@@ -86,6 +86,7 @@ Use this document as the source of truth for building React clients against the 
   }
   ```
 - **GET** `/retrieval/tailored` *(auth required)* to list previous assets.
+- If `assetType` is omitted, the API stores **`summary`**. If `projectIds` is omitted, context is the three newest projects in the database (not owner-filtered). See `operational-runbook.md`.
 
 ## Knowledge Graph API
 
@@ -160,6 +161,7 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   }
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
+- `jobDescription` must be at least 50 characters. Project matches are the 25 newest projects whose `technologies` overlap required tech (not owner-filtered). Resume matches are the caller's. See `operational-runbook.md`.
 
 ## LLM Catalog Routes
 

@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+Studio workflows (resume ingest/export, cover-letter studio, persona coach, client vs API validation) are documented in [`docs/app-workflows.md`](./docs/app-workflows.md). API integration notes: [`docs/frontend.md`](./docs/frontend.md).
+
 ## Getting Started
 
 First, run the development server:
