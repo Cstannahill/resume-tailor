@@ -103,3 +103,4 @@ Default local URLs:
 - This repository is structured as a monorepo but does not currently use npm/pnpm/yarn workspaces at the root.
 - Each package manages its own dependencies and lockfile.
 - For deeper backend details and route coverage, see `resume-tailor-api/README.md`.
+- Operational runbooks: `resume-tailor-api/docs/README.md` (indexing, validation, scoping) and `resume-tailor-frontend/docs/app-workflows.md` (studio pages, exporters, client vs API limits).
