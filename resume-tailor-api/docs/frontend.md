@@ -40,7 +40,7 @@ Use this document as the source of truth for building React clients against the 
 
 - **GET** `/projects?search=api&technology=TypeScript&mine=true` (set `mine=true` to restrict to current user)
 
-- **GET** `/projects/:projectId` *(auth required)*
+- **GET** `/projects/:projectId` *(public when `ownerId` is null; `403` if owned by someone else)*
 
 ## Resumes Module
 
@@ -91,7 +91,8 @@ Use this document as the source of truth for building React clients against the 
 
 Visualize the relationship between projects, resumes, technologies, artifacts, and persona focus areas.
 
-- **GET** `/knowledge-graph?userId=user-123` *(defaults to current user if omitted)*
+- **GET** `/knowledge-graph?userId=user-123` *(public; omitting `userId` does **not** default to the JWT user — it returns all resumes and sessions. Project nodes are always unscoped.)*
+- Construction, artifact volume, and persona-edge pitfalls: `docs/knowledge-graph.md`.
 - Response:
   ```json
   {
@@ -160,6 +161,7 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   }
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
+- Matching uses indexed **language** names on projects vs JD **library** names — see `docs/job-intelligence.md`.
 
 ## LLM Catalog Routes
 
@@ -167,7 +169,7 @@ Upload/paste job descriptions to extract insights and compare against stored ass
 
 - **POST** `/auth/register` / **POST** `/auth/login` → `{ token, user }`
 - **GET** `/auth/me` / **PUT** `/auth/me` *(auth required)* for profile updates
-- **GET/PUT** `/settings` *(auth)* to manage default provider + notification prefs
+- **GET/PUT** `/settings` *(auth)* to manage default provider + notification prefs. API fields are `defaultLlmProvider` / `notificationPrefs`; the current studio sends different names — see `docs/auth-and-settings.md`.
 - **GET** `/settings/provider-keys`, **PUT** `/settings/provider-keys`, **DELETE** `/settings/provider-keys/:provider` *(auth)* to manage encrypted provider keys
 
 ## LLM Catalog Routes
@@ -179,7 +181,7 @@ Upload/paste job descriptions to extract insights and compare against stored ass
 ## Implementation Tips
 
 1. **API client**: centralize fetch logic to unwrap `{ data }`, capture `{ error }`, and attach base headers.
-2. **LLM selections**: pair `/llm/models` with forms to let users override providers/models.
+2. **LLM selections**: per-request `llmProvider` selects an adapter; catalogs are display-only and generation uses hardcoded default models (`docs/llm-generation.md`).
 3. **Graph tooling**: memoize `/knowledge-graph`, provide filters/search, and surface summary stats.
 4. **Job intelligence UI**: combine insights + coverage data into comparison tables with remediation CTAs.
 5. **Optimistic UX**: indexing/tailoring/job intelligence can take seconds; show progress indicators.

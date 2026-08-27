@@ -4,7 +4,7 @@ This addendum tracks the latest resume-section editing APIs so the React workspa
 
 ## Auth Reminder
 
-All resume endpoints require a valid JWT (`Authorization: Bearer <token>`). Reuse the existing `/auth/login` flow documented in `frontend.MD`.
+All resume endpoints require a valid JWT (`Authorization: Bearer <token>`). Reuse the existing `/auth/login` flow documented in `frontend.md`.
 
 ## Resume Section Workflows
 
@@ -138,4 +138,6 @@ Body:
 - Missing resume or trying to edit someone else’s resume → `403/404`.
 - LLM failures still return 200 with `content` fallback (raw text) and `rationale` describing parse issues.
 
-Keep `frontend.MD` as the canonical reference for legacy routes; use this addendum only for the new resume-section editing surface. Update your client services accordingly.***
+Keep `frontend.md` as the canonical reference for legacy routes; use this addendum only for the new resume-section editing surface. Update your client services accordingly.
+
+Ingest pipeline (regex seed, LLM merge, insight sources): `docs/resume-ingestion.md`.
