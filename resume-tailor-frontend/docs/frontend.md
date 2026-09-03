@@ -75,19 +75,21 @@ Use this document as the source of truth for building React clients against the 
 
 ## Retrieval (tailored assets)
 
-- **POST** `/retrieval/tailor` _(auth required)_ to generate resume/cover-letter-style content with structured recommendations.
+- **POST** `/retrieval/tailor` _(auth required)_ to generate resume/cover-letter-style content with structured recommendations. `userId` is taken from the JWT; do not send it in the body.
   ```json
   {
-    "userId": "user-123",
     "jobTitle": "Senior React Engineer",
-    "jobDescription": "Full JD text...",
+    "jobDescription": "Full JD text (min 30 characters)...",
     "resumeId": "uuid-from-resume",
     "projectIds": ["project-uuid-1", "project-uuid-2"],
     "assetType": "cover_letter",
     "llmProvider": "ollama"
   }
   ```
-- **GET** `/retrieval/tailored` _(auth required)_ to list previous assets.
+  - `assetType` defaults to **`summary`** when omitted. The studio always sends `cover_letter`.
+  - `resumeId` / `projectIds` are **not** owner-checked. Omitting `projectIds` uses the three newest projects globally.
+  - Workflow: [`../../resume-tailor-api/docs/retrieval-tailoring.md`](../../resume-tailor-api/docs/retrieval-tailoring.md). List/GET shape mismatches: [`studio-data-shapes.md`](./studio-data-shapes.md).
+- **GET** `/retrieval/tailored` _(auth required)_ lists the caller's assets (`createdAt` desc). Rows have no `updatedAt`.
 
 ## Knowledge Graph API
 

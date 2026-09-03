@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+Product docs: `docs/frontend.md` (API payloads), `docs/studio-data-shapes.md` (list/GET fields the studio reads that the API does not return).
+
 ## Getting Started
 
 First, run the development server:

@@ -12,4 +12,6 @@ The JSON-based LLM prompts (cover letters, resume sections, job insights, person
 - `src/utils/json.ts` exposes `parseJsonResponse`, which trims responses, strips ```json fences, and extracts the first JSON object/array block before calling `JSON.parse`.
 - Retrieval, resume, conversation, and job-intelligence services now use this helper so fenced or padded responses still deserialize, while unstructured outputs fall back to previous text-based flows.
 
+For retrieval specifically: a `TailoredAsset` row is always inserted. Unparsed model text is stored in `content`; the HTTP `recommendations` object then uses the unstructured-response note, and the DB `recommendations` column is left unset. See [`retrieval-tailoring.md`](./retrieval-tailoring.md).
+
 This keeps backend data consistent even if a provider briefly ignores the formatting instruction.
