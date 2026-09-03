@@ -97,7 +97,7 @@ Copy `.env.example` → `.env` and fill:
 | Job Intelligence | `POST /intelligence/job`                                                                                   |
 | LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `docs/frontend.md` for payload shapes and sample responses. Tailor pipeline and unscoped resume/project lookup: `docs/retrieval-tailoring.md`.
 
 ## Security Notes
 
@@ -111,3 +111,4 @@ See `frontend.MD` for payload shapes and sample responses.
 - All TypeScript imports use explicit `.js` suffixes (NodeNext compatibility).
 - Repositories export typed helpers with dedicated `*.types.ts`.
 - Prompts for every LLM-driven workflow live in `src/prompts/basePrompts.ts` for consistent output.
+- Doc index: `docs/README.md`.
