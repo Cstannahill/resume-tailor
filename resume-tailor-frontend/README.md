@@ -37,4 +37,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Workspace notes
 
-Studio auth and persona-coach contracts (display name never persisted, 401 does not log you out, conversation history shape) are in `docs/auth-and-coach-contracts.md`. API counterparts live in `../resume-tailor-api/docs/`.
+Studio contracts: `docs/auth-and-coach-contracts.md` (identity/session) and `docs/studio-mutation-contracts.md` (developer report unwrap, empty `resumeId`, cache/PATCH gaps). API counterparts live in `../resume-tailor-api/docs/`.

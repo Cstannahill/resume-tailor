@@ -2,7 +2,7 @@
 
 Source-backed notes for the Express API. Payload catalogs live in `frontend.md`; this folder also has workflow runbooks.
 
-This branch adds identity, session, and conversation **client-contract** notes that open drafts #11–#14 do not cover. Prefer merging #11, then #12, then #13, then #14, then this PR. If this lands after those drafts, combine the `docs/README.md` tables.
+This branch adds identity, conversation, indexing-lifecycle, and studio-mutation notes that open drafts #11–#14 do not cover. Prefer merging #11, then #12, then #13, then #14, then this PR. If this lands after those drafts, combine the `docs/README.md` tables.
 
 | Doc | Use it for |
 | --- | --- |
@@ -11,5 +11,6 @@ This branch adds identity, session, and conversation **client-contract** notes t
 | [`cover-letter.md`](./cover-letter.md) | Shared JSON prompt/parsing for LLM collateral |
 | [`auth-identity-and-sessions.md`](./auth-identity-and-sessions.md) | `name` vs `displayName`, password 6 vs 8, stale localStorage, 401 ≠ logout, CORS 500 |
 | [`conversation-client-contract.md`](./conversation-client-contract.md) | Prisma vs studio session/response shapes, stale respond snapshot, no list API |
+| [`indexing-lifecycle.md`](./indexing-lifecycle.md) | Local-path indexing, unused `tags`, unparsed summary, insight accumulation, no DELETE |
 
-Studio-side counterparts: `../resume-tailor-frontend/docs/auth-and-coach-contracts.md`.
+Studio-side counterparts: `../resume-tailor-frontend/docs/auth-and-coach-contracts.md` and `studio-mutation-contracts.md`.
