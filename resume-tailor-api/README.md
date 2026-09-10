@@ -97,7 +97,7 @@ Copy `.env.example` → `.env` and fill:
 | Job Intelligence | `POST /intelligence/job`                                                                                   |
 | LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `docs/frontend.md` for payload shapes and sample responses. Auth identity and browser-session pitfalls: `docs/auth-identity-and-sessions.md`. Conversation Prisma vs studio shapes: `docs/conversation-client-contract.md`. Doc index: `docs/README.md`.
 
 ## Security Notes
 
