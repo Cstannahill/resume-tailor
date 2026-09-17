@@ -36,9 +36,7 @@ npm install
 ```bash
 cd ../resume-tailor-api
 cp .env.example .env
-
-cd ../resume-tailor-frontend
-cp .env.example .env
+# Frontend: optional `.env.local` with NEXT_PUBLIC_API_BASE_URL (no .env.example in-package)
 ```
 
 3. Update env values:
@@ -48,8 +46,9 @@ cp .env.example .env
   - Set `AUTH_JWT_SECRET`
   - Set `APP_ENCRYPTION_KEY` (base64 32-byte key)
   - Configure one or more LLM providers (`OLLAMA_*`, `BEDROCK_*`, `GOOGLE_GENAI_API_KEY`, `OPENROUTER_*`)
-- Frontend (`resume-tailor-frontend/.env`)
+- Frontend (`resume-tailor-frontend/.env` or `.env.local`)
   - Set `NEXT_PUBLIC_API_BASE_URL` (default: `http://localhost:4000`)
+  - There is no committed `.env.example` in the frontend package.
 
 4. Initialize database (API package):
 
@@ -103,3 +102,5 @@ Default local URLs:
 - This repository is structured as a monorepo but does not currently use npm/pnpm/yarn workspaces at the root.
 - Each package manages its own dependencies and lockfile.
 - For deeper backend details and route coverage, see `resume-tailor-api/README.md`.
+- Project list/detail authorization: `resume-tailor-api/docs/project-read-authorization.md`.
+- Studio export and cover-letter handoff: `resume-tailor-frontend/docs/export-and-deliverables.md`, `resume-tailor-frontend/docs/cover-letter-studio-handoff.md`.
