@@ -38,21 +38,21 @@ Use this document as the source of truth for building React clients against the 
   - Local indexing uses `{ "kind": "local", "path": "C:\\projects\\sample" }`.
   - Response includes `{ project, heuristics, summary }`.
 
-- **GET** `/projects?search=api&technology=TypeScript&mine=true` (set `mine=true` to restrict to current user)
+- **GET** `/projects?search=api&technology=TypeScript&mine=true` — **no auth**. `mine=true` filters to the JWT user only when `optionalAuth` attached `req.user`. Response is full `Project` rows (including `insights`, `localPath`, `repoUrl`). See `docs/project-read-authorization.md`.
 
-- **GET** `/projects/:projectId` *(auth required)*
+- **GET** `/projects/:projectId` — **no `authenticate` middleware**. Unowned rows (`ownerId` null) are public. Owned rows return 403 unless `req.user.id` matches. The studio does not call this route; it lists via `GET /projects`.
 
 ## Resumes Module
 
 - **POST** `/resumes/ingest` *(auth required)*
   ```json
   {
-    "userId": "user-123",
     "resumeText": "Plaintext or OCR output...",
     "sourceName": "May 2024 resume.pdf",
     "llmProvider": "google"
   }
   ```
+  - `userId` is taken from the JWT, not the body (Zod strips unknown keys).
 - Response: `{ record: Resume, insight: ResumeInsight }`
 
 - **GET** `/resumes` *(current user)*
@@ -76,7 +76,6 @@ Use this document as the source of truth for building React clients against the 
 - **POST** `/retrieval/tailor` *(auth required)* to generate resume/cover-letter-style content with structured recommendations.
   ```json
   {
-    "userId": "user-123",
     "jobTitle": "Senior React Engineer",
     "jobDescription": "Full JD text...",
     "resumeId": "uuid-from-resume",
@@ -91,7 +90,7 @@ Use this document as the source of truth for building React clients against the 
 
 Visualize the relationship between projects, resumes, technologies, artifacts, and persona focus areas.
 
-- **GET** `/knowledge-graph?userId=user-123` *(defaults to current user if omitted)*
+- **GET** `/knowledge-graph?userId=user-123` *(public; `userId` is optional and is **not** defaulted from the JWT. Omit it and resume/persona nodes are unscoped; project nodes are always global.)*
 - Response:
   ```json
   {
@@ -128,7 +127,6 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   ```json
   {
     "jobDescription": "Full job description text...",
-    "userId": "user-123",
     "llmProvider": "google"
   }
   ```
@@ -159,6 +157,7 @@ Upload/paste job descriptions to extract insights and compare against stored ass
     }
   }
   ```
+- `userId` is taken from the JWT. There is no `jobTitle` field; the studio title input is client-only (see `resume-tailor-frontend/docs/cover-letter-studio-handoff.md`).
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
 
 ## LLM Catalog Routes

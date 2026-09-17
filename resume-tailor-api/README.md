@@ -44,6 +44,8 @@ src/
     conversations/
     retrieval/
     intelligence/            # Job description analyzer
+    profile/                 # Developer baseline report + user-context snapshot
+    llm/                     # Provider model catalogs
   repositories/              # Prisma data access helpers
   routes/                    # Express routers per module
   app.ts                     # Express bootstrap
@@ -54,16 +56,17 @@ src/
 
 Copy `.env.example` → `.env` and fill:
 
-| Variable                                                       | Description                                |
-| -------------------------------------------------------------- | ------------------------------------------ | ------- | ------ | ----------- |
-| `DATABASE_URL`                                                 | PostgreSQL connection string               |
-| `DEFAULT_LLM_PROVIDER`                                         | `ollama                                    | bedrock | google | openrouter` |
-| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY`                            | Ollama Cloud config                        |
-| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock creds                          |
-| `GOOGLE_GENAI_API_KEY`                                         | Google GenAI key                           |
-| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`                    | OpenRouter config                          |
-| `AUTH_JWT_SECRET`                                              | Long random string for JWT signing         |
-| `APP_ENCRYPTION_KEY`                                           | Base64-encoded 32-byte key for AES-256-GCM |
+| Variable | Description |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string (`z.string().url()`) |
+| `DEFAULT_LLM_PROVIDER` | `ollama`, `bedrock`, `google`, or `openrouter` (default `ollama`) |
+| `OLLAMA_BASE_URL`, `OLLAMA_API_KEY` | Ollama Cloud config |
+| `BEDROCK_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | AWS Bedrock creds |
+| `GOOGLE_GENAI_API_KEY` | Google GenAI key |
+| `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL` | OpenRouter config |
+| `AUTH_JWT_SECRET` | JWT signing secret, **min 32 characters** |
+| `APP_ENCRYPTION_KEY` | Base64-encoded **32-byte** key for AES-256-GCM |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated origins (default `http://localhost:3000`) |
 
 ## Getting Started
 
@@ -89,15 +92,16 @@ Copy `.env.example` → `.env` and fill:
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
 | Auth             | `POST /auth/register`, `POST /auth/login`, `GET/PUT /auth/me`                                              |
 | Settings         | `GET/PUT /settings`, `GET/PUT/DELETE /settings/provider-keys`                                              |
-| Projects         | `POST /projects/index`, `GET /projects`, `GET /projects/:id`                                               |
-| Knowledge Graph  | `GET /knowledge-graph?userId=<id>`                                                                         |
-| Resumes          | `POST /resumes/ingest`, `GET /resumes`, `GET /resumes/:id`                                                 |
-| Conversations    | `POST /conversations/session`, `POST /conversations/session/:id/respond`, `GET /conversations/session/:id` |
-| Retrieval        | `POST /retrieval/tailor`, `GET /retrieval/tailored`                                                        |
-| Job Intelligence | `POST /intelligence/job`                                                                                   |
-| LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
+| Projects         | `POST /projects/index` *(auth)*; `GET /projects`, `GET /projects/:id` *(public — see `docs/project-read-authorization.md`)* |
+| Knowledge Graph  | `GET /knowledge-graph?userId=<id>` *(public; `userId` not JWT-defaulted)*                                                    |
+| Resumes          | `POST /resumes/ingest`, `GET /resumes`, `GET /resumes/:id`                                                                   |
+| Conversations    | `POST /conversations/session`, `POST /conversations/session/:id/respond`, `GET /conversations/session/:id`                   |
+| Retrieval        | `POST /retrieval/tailor`, `GET /retrieval/tailored`                                                                          |
+| Job Intelligence | `POST /intelligence/job`                                                                                                     |
+| Developer report | `POST /profiles/developer-report`                                                                                            |
+| LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags` *(public)*                                             |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `docs/frontend.md` for payload shapes. Doc index: `docs/README.md`.
 
 ## Security Notes
 
@@ -111,3 +115,4 @@ See `frontend.MD` for payload shapes and sample responses.
 - All TypeScript imports use explicit `.js` suffixes (NodeNext compatibility).
 - Repositories export typed helpers with dedicated `*.types.ts`.
 - Prompts for every LLM-driven workflow live in `src/prompts/basePrompts.ts` for consistent output.
+- Unhandled `Error` values (adapter failures, unparsed developer-report JSON) become **500** `{ error: { message: "Internal Server Error" } }`; only `HttpError` messages are returned to clients.
