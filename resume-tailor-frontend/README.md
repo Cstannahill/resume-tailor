@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+Resume Tailor routes live in `src/app`: `/` (workspace), `/resume`, `/cover-letter`, and `/settings`. How the project list, graph canvas, and API client treat payloads is documented in [docs/dashboard-graph-and-client-errors.md](docs/dashboard-graph-and-client-errors.md).
+
 ## Getting Started
 
 First, run the development server:
