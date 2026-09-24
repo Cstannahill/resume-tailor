@@ -78,10 +78,10 @@ Copy `.env.example` → `.env` and fill:
 | Script             | Description                                                 |
 | ------------------ | ----------------------------------------------------------- |
 | `npm run dev`      | Start Express via `tsx watch` (ESM hot reloading)           |
-| `npm run build`    | Type-check (tsc, no emit)                                   |
-| `npm run start`    | Run compiled output (after `npm run build`)                 |
+| `npm run build`    | Emit `dist/` via `tsc` (required before `start`)            |
+| `npm run start`    | Run `node --enable-source-maps dist/server.js`              |
 | `npm run lint`     | ESLint (TS)                                                 |
-| `npm run prisma:*` | Prisma helpers (`migrate`, `studio`, `generate`, `db push`) |
+| `npm run prisma:*` | `migrate`, `generate`, `studio`, `deploy`                   |
 
 ## Core API Overview
 
@@ -111,3 +111,4 @@ See `frontend.MD` for payload shapes and sample responses.
 - All TypeScript imports use explicit `.js` suffixes (NodeNext compatibility).
 - Repositories export typed helpers with dedicated `*.types.ts`.
 - Prompts for every LLM-driven workflow live in `src/prompts/basePrompts.ts` for consistent output.
+- Indexing sample limits, graph id minting, and HTTP error collapse: `docs/indexing-sample-and-http-errors.md`. Doc index: `docs/README.md`.
