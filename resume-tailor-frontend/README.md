@@ -34,3 +34,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Project docs
+
+This app is the Experience Studio client for `resume-tailor-api`. Route sketches live in `docs/frontend.md` and `docs/frontendv2.md`. Fields the UI receives and does not render are in `docs/studio-omitted-signals.md`. Set `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:4000`) when the API is not on port 4000.

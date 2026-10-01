@@ -97,7 +97,7 @@ Copy `.env.example` → `.env` and fill:
 | Job Intelligence | `POST /intelligence/job`                                                                                   |
 | LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `docs/frontend.md` for payload shapes and sample responses. Partial JSON, resume seed regexes, and unused prompt keys are in `docs/parsed-json-and-seed-heuristics.md`. An index is in `docs/README.md`.
 
 ## Security Notes
 

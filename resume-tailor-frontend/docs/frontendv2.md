@@ -70,6 +70,7 @@ Body:
 
 - Response mirrors the `generate` endpoint with improved `content` + `rationale`.
 - Use when the user edits inline and wants “Make this better” behavior.
+- The builder sends the on-screen draft as `currentContent` and only `notes` in `context`. Summary generate is the only call that sends `tone: "concise"`. Summary Apply joins the suggestion into one paragraph. See [studio-omitted-signals.md](./studio-omitted-signals.md).
 
 ### 3. Persist Section Updates
 

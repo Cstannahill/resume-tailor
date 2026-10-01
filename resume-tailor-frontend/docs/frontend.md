@@ -202,6 +202,7 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   }
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
+- The cover-letter studio does not render cultural notes, responsibility themes, risk alerts, or match summaries. See [studio-omitted-signals.md](./studio-omitted-signals.md).
 
 ## LLM Catalog Routes
 

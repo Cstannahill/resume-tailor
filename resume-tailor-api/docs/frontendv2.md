@@ -71,6 +71,7 @@ Body:
 
 - Response mirrors the `generate` endpoint with improved `content` + `rationale`.
 - Use when the user edits inline and wants “Make this better” behavior.
+- The studio sends the on-screen draft as `currentContent` and only `notes` in `context`. The API still fills summary and skills from the stored resume, so the model can see two different copies. Summary Apply joins suggestion lines with a space. See `resume-tailor-frontend/docs/studio-omitted-signals.md`.
 
 ### 3. Persist Section Updates
 
