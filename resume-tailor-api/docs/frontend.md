@@ -160,6 +160,7 @@ Upload/paste job descriptions to extract insights and compare against stored ass
   }
   ```
 - UI ideas: show “JD Insights” cards, highlight missing skills, offer CTA buttons (tailor resume, start persona session, reindex project).
+- `importance` is not used when matching. A parsed body with no `requiredTechnologies` array fails the request. The studio also hides `culturalNotes`, `responsibilityThemes`, and `riskAlerts`. See [parsed-json-and-seed-heuristics.md](./parsed-json-and-seed-heuristics.md).
 
 ## LLM Catalog Routes
 

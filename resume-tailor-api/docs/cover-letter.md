@@ -13,3 +13,5 @@ The JSON-based LLM prompts (cover letters, resume sections, job insights, person
 - Retrieval, resume, conversation, and job-intelligence services now use this helper so fenced or padded responses still deserialize, while unstructured outputs fall back to previous text-based flows.
 
 This keeps backend data consistent even if a provider briefly ignores the formatting instruction.
+
+A parsed object is not validated against the prompt schema. Missing `requiredTechnologies` on job intelligence throws; tailor treats any parsed value as success; resume seed regexes still rewrite skills and phone before that merge. See [parsed-json-and-seed-heuristics.md](./parsed-json-and-seed-heuristics.md).
