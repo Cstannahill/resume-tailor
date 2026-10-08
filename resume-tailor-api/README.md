@@ -97,7 +97,7 @@ Copy `.env.example` → `.env` and fill:
 | Job Intelligence | `POST /intelligence/job`                                                                                   |
 | LLM Catalogs     | `GET /llm/models`, `GET /llm/models/:provider`, `GET /llm/ollama/tags`                                     |
 
-See `frontend.MD` for payload shapes and sample responses.
+See `frontend.MD` for payload shapes and sample responses. Section generate/improve parsing is in `docs/section-suggestion-parsing.md` (`docs/README.md` indexes the API docs).
 
 ## Security Notes
 
