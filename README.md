@@ -103,3 +103,12 @@ Default local URLs:
 - This repository is structured as a monorepo but does not currently use npm/pnpm/yarn workspaces at the root.
 - Each package manages its own dependencies and lockfile.
 - For deeper backend details and route coverage, see `resume-tailor-api/README.md`.
+
+## Operational notes
+
+Source-verified limits that the route sketches do not spell out:
+
+- `resume-tailor-api/docs/llm-call-budgets.md` — token caps per workflow, and which providers actually apply them.
+- `resume-tailor-api/docs/indexing-signals.md` — language strings produced from file extensions, and how re-index writes land.
+- `resume-tailor-api/docs/auth-status-mapping.md` — login/register status codes and `mine=true` when the bearer is invalid.
+- `resume-tailor-frontend/docs/client-failure-surfaces.md` — messages the studio shows for those failures.

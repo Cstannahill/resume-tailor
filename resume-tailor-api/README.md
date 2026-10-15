@@ -111,3 +111,11 @@ See `frontend.MD` for payload shapes and sample responses.
 - All TypeScript imports use explicit `.js` suffixes (NodeNext compatibility).
 - Repositories export typed helpers with dedicated `*.types.ts`.
 - Prompts for every LLM-driven workflow live in `src/prompts/basePrompts.ts` for consistent output.
+
+## Runbooks
+
+| Guide | Covers |
+| --- | --- |
+| `docs/llm-call-budgets.md` | `maxOutputTokens` per caller, Ollama not sending that cap, empty-reply strings, catalog error cache |
+| `docs/indexing-signals.md` | Extension-to-language map, export detection, re-index delete-then-insert order |
+| `docs/auth-status-mapping.md` | Optional auth vs `authenticate`, login 401 collapse, provider-key 204 vs 500 |
