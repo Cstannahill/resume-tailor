@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+Studio failure behavior (401 copy, model-catalog retry, provider-key display) is documented in [`docs/client-failure-surfaces.md`](docs/client-failure-surfaces.md). API budgets and status codes are under `../resume-tailor-api/docs/`.
+
 ## Getting Started
 
 First, run the development server:
