@@ -103,3 +103,10 @@ Default local URLs:
 - This repository is structured as a monorepo but does not currently use npm/pnpm/yarn workspaces at the root.
 - Each package manages its own dependencies and lockfile.
 - For deeper backend details and route coverage, see `resume-tailor-api/README.md`.
+
+## Operational notes
+
+Source-verified behavior that the route sketches do not spell out:
+
+- `resume-tailor-api/docs/write-order-and-request-shapes.md` — coaching response order, section-context fields the API drops, and project upsert races.
+- `resume-tailor-frontend/docs/empty-states-and-coach-payloads.md` — dashboard failures that look like empty data, and the persona coach request body.
