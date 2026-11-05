@@ -86,11 +86,12 @@ Body:
 ```
 
 - The backend maps sections to the correct DB fields:
-  - `summary` → `extractedSummary` (string)
-  - `skills` → `string[]`
-  - `experiences` → array of `{ company?, role?, achievements[] }`
-  - `education` → array of entries
+  - `summary` → `extractedSummary` (string). A non-string is `JSON.stringify`'d.
+  - `skills` → `string[]` (`String(item)` per array element)
+  - `experiences` → array of `{ company?, role?, achievements[] }`. A bullet string in that array is stored as `{ achievements: [] }`; the sentence is dropped. `null` elements return 500.
+  - `education` → array of entries, stored as given
   - `contact` → object `{ email?, phone?, ... }`
+- The sample `content` array above is the right shape for `skills`, not for `experiences`. Send experience objects.
 - PATCH returns the updated resume record; re-fetch `/resumes/:id` if you need a full refresh.
 
 ## UX Flow Suggestions

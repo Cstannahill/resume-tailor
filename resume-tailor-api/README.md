@@ -111,3 +111,4 @@ See `frontend.MD` for payload shapes and sample responses.
 - All TypeScript imports use explicit `.js` suffixes (NodeNext compatibility).
 - Repositories export typed helpers with dedicated `*.types.ts`.
 - Prompts for every LLM-driven workflow live in `src/prompts/basePrompts.ts` for consistent output.
+- Join-table write order, experience PATCH shapes, and catalog fields: `docs/join-writes-and-payload-edges.md`. Index: `docs/README.md`.
