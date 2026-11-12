@@ -103,3 +103,10 @@ Default local URLs:
 - This repository is structured as a monorepo but does not currently use npm/pnpm/yarn workspaces at the root.
 - Each package manages its own dependencies and lockfile.
 - For deeper backend details and route coverage, see `resume-tailor-api/README.md`.
+
+## Operational notes
+
+Source-verified behavior that the quick start does not spell out:
+
+- `resume-tailor-api/docs/startup-and-health.md` — empty env assignments, the listen log, and `GET /health`.
+- `resume-tailor-frontend/docs/controlled-editor-fields.md` — resume skills and achievement fields, and Preview versus export strings.
