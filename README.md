@@ -103,3 +103,10 @@ Default local URLs:
 - This repository is structured as a monorepo but does not currently use npm/pnpm/yarn workspaces at the root.
 - Each package manages its own dependencies and lockfile.
 - For deeper backend details and route coverage, see `resume-tailor-api/README.md`.
+
+## Operational notes
+
+Source-verified behavior that the quick start does not spell out:
+
+- `resume-tailor-api/docs/user-context-window.md` — which stored resume, project, and insight fields later section and developer-report prompts actually receive.
+- `resume-tailor-frontend/docs/knowledge-graph-paint-loop.md` — the dashboard graph keeps repainting a finished layout for as long as the page is open.
