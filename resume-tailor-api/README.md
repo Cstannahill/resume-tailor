@@ -111,3 +111,4 @@ See `frontend.MD` for payload shapes and sample responses.
 - All TypeScript imports use explicit `.js` suffixes (NodeNext compatibility).
 - Repositories export typed helpers with dedicated `*.types.ts`.
 - Prompts for every LLM-driven workflow live in `src/prompts/basePrompts.ts` for consistent output.
+- What those prompts receive from stored rows: `docs/user-context-window.md`. Index: `docs/README.md`.
